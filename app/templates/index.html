@@ -26,7 +26,7 @@
     <!-- Custom Styles & Favicon -->
     <link rel="icon" type="image/png" href="/static/icon.png">
     <link rel="apple-touch-icon" href="/static/icon.png">
-    <link rel="stylesheet" href="/static/css/styles.css?v=2.7.0">
+    <link rel="stylesheet" href="/static/css/styles.css?v=2.8.0">
     <link rel="manifest" href="/static/manifest.json">
     <script>
         window.VAPID_PUBLIC_KEY = {{ vapid_public_key | tojson }};
@@ -104,7 +104,10 @@
             <button id="open-alert-modal-btn" class="px-4 py-2 rounded-lg text-xs font-bold bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white shadow-md shadow-sky-500/25 transition-all flex items-center gap-1.5 active:scale-95">
                 <span>+</span> Create Alert
             </button>
-         <!-- TRADINGVIEW SUB-HEADER: TIMEFRAMES, CHART TYPES, INDICATORS & OHLCV READOUT -->
+        </div>
+    </header>
+
+    <!-- TRADINGVIEW SUB-HEADER: TIMEFRAMES, CHART TYPES, INDICATORS & OHLCV READOUT -->
     <div class="bg-slate-100 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800 px-4 py-1.5 flex flex-wrap items-center justify-between gap-3 text-xs transition-colors">
         <div class="flex items-center gap-2.5 flex-wrap">
             
@@ -680,8 +683,8 @@
     </div>
 
     <!-- Scripts with Cache Busting -->
-    <script src="/static/js/chart.js?v=2.7.0"></script>
-    <script src="/static/js/notifications.js?v=2.7.0"></script>
-    <script src="/static/js/app.js?v=2.7.0"></script>
+    <script src="/static/js/chart.js?v=2.8.0"></script>
+    <script src="/static/js/notifications.js?v=2.8.0"></script>
+    <script src="/static/js/app.js?v=2.8.0"></script>
 </body>
 </html>

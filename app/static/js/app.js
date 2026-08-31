@@ -123,6 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 await chartInstance.loadCandles(paneSym, paneTf);
                 chartInstance.setAlertPriceLines(this.alerts);
+                chartInstance.resize();
 
                 const paneObj = {
                     index: i,
@@ -168,6 +169,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 this.panes.push(paneObj);
             }
+
+            setTimeout(() => {
+                for (const p of this.panes) {
+                    if (p.chart) {
+                        p.chart.resize();
+                    }
+                }
+            }, 60);
 
             this.updateHeaderPrice();
         },

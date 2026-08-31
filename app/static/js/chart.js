@@ -233,6 +233,16 @@ class TradingChart {
         }
     }
 
+    resize() {
+        if (!this.chart || !this.container) return;
+        const w = this.container.clientWidth;
+        const h = this.container.clientHeight;
+        if (w > 0 && h > 0) {
+            this.chart.applyOptions({ width: w, height: h });
+            this.resizeDrawingCanvas();
+        }
+    }
+
     setTheme(isDark) {
         this.isDarkMode = isDark;
         if (!this.chart) return;
