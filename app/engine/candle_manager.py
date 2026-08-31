@@ -56,7 +56,7 @@ class Candle:
         }
 
 class SymbolCandleStore:
-    def __init__(self, symbol: str, max_bars: int = 120000):
+    def __init__(self, symbol: str, max_bars: int = 20000):
         self.symbol = symbol
         self.max_bars = max_bars
         self.timeframe_candles: Dict[str, List[Candle]] = {
@@ -68,19 +68,19 @@ class SymbolCandleStore:
     def seed_initial_candles(self, base_price: float = 1.0850, volatility: float = 0.0004):
         now = int(time.time())
 
-        # Timeframe-specific historical depth (At least 1 Year for 1h to 15m)
+        # Timeframe-specific historical depth (1 Year+ for 1h, 4h, 1d, 1w)
         tf_depths = {
             "1w": (320, 604800, volatility * 5.0),    # 320 weeks (~6.1 years)
             "1d": (1200, 86400, volatility * 3.0),    # 1200 days (~3.3 years)
             "4h": (3000, 14400, volatility * 1.8),    # 3000 4h bars (~1.37 years)
-            "2h": (5000, 7200, volatility * 1.4),     # 5000 2h bars (~1.14 years)
-            "1h": (10000, 3600, volatility * 1.2),    # 10000 1h bars (~1.14 years / 416 days)
-            "45m": (12000, 2700, volatility * 1.1),   # 12000 45m bars (~1.02 years)
-            "30m": (18000, 1800, volatility * 1.0),   # 18000 30m bars (~1.03 years / 375 days)
-            "15m": (36000, 900, volatility * 0.8),    # 36000 15m bars (~1.03 years / 375 days)
-            "5m": (60000, 300, volatility * 0.6),     # 60000 5m bars (~208 days)
-            "3m": (40000, 180, volatility * 0.5),     # 40000 3m bars (~83 days)
-            "1m": (50000, 60, volatility * 0.4),      # 50000 1m bars (~34.7 days)
+            "2h": (4000, 7200, volatility * 1.4),     # 4000 2h bars (~1.0 years)
+            "1h": (9000, 3600, volatility * 1.2),     # 9000 1h bars (~1.03 years / 375 days)
+            "45m": (2500, 2700, volatility * 1.1),    # 2500 45m bars (~78 days)
+            "30m": (3500, 1800, volatility * 1.0),    # 3500 30m bars (~73 days)
+            "15m": (3500, 900, volatility * 0.8),     # 3500 15m bars (~36 days)
+            "5m": (3500, 300, volatility * 0.6),      # 3500 5m bars (~12 days)
+            "3m": (3500, 180, volatility * 0.5),      # 3500 3m bars (~7 days)
+            "1m": (3500, 60, volatility * 0.4),       # 3500 1m bars (~2.4 days)
         }
 
         for tf, (num_bars, sec, tf_vol) in tf_depths.items():
