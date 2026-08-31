@@ -1,23 +1,20 @@
 ﻿import os
 import sys
-import glob
 
-# Auto-detect and register Render virtualenv site-packages if invoked via system python
-for pattern in [
-    "/opt/render/project/src/.venv/lib/python*/site-packages",
-    "/opt/render/project/.venv/lib/python*/site-packages",
-    "/opt/render/project/src/venv/lib/python*/site-packages",
-    os.path.expanduser("~/.local/lib/python*/site-packages"),
-    "./venv/Lib/site-packages",
+# Auto re-exec with virtualenv python if invoked via mismatched system python on Render
+for venv_py in [
+    "/opt/render/project/src/.venv/bin/python",
+    "/opt/render/project/.venv/bin/python",
+    "./.venv/bin/python",
 ]:
-    for path in glob.glob(pattern):
-        if path not in sys.path:
-            sys.path.insert(0, path)
+    if os.path.exists(venv_py) and os.path.realpath(sys.executable) != os.path.realpath(venv_py):
+        os.execv(venv_py, [venv_py] + sys.argv)
 
 import uvicorn
+from app.config import settings
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
+    port = int(os.environ.get("PORT", settings.PORT or 8000))
     host = os.environ.get("HOST", "0.0.0.0")
     print("=" * 60)
     print("🚀 LIVE MARKET ALERT ENGINE")
