@@ -102,6 +102,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                         <div class="flex items-center gap-1.5">
                             <span class="pane-countdown text-[11px] font-mono font-bold text-amber-500 dark:text-amber-400">⏱️ --</span>
+                            <button class="pane-zoom-in-btn text-slate-400 hover:text-sky-500 dark:hover:text-sky-400 p-0.5 text-xs" title="Zoom In">
+                                ➕
+                            </button>
+                            <button class="pane-zoom-out-btn text-slate-400 hover:text-sky-500 dark:hover:text-sky-400 p-0.5 text-xs" title="Zoom Out">
+                                ➖
+                            </button>
                             <button class="pane-reset-btn text-slate-400 hover:text-sky-500 dark:hover:text-sky-400 p-0.5 text-xs" title="Reset chart & scroll to current candle">
                                 ⏭️
                             </button>
@@ -159,6 +165,22 @@ document.addEventListener("DOMContentLoaded", () => {
                     await paneObj.chart.loadCandles(paneObj.symbol, paneObj.timeframe);
                     this.updateCandleCountdown();
                 });
+
+                const zoomInBtn = paneWrapper.querySelector(".pane-zoom-in-btn");
+                if (zoomInBtn) {
+                    zoomInBtn.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        paneObj.chart.zoomIn();
+                    });
+                }
+
+                const zoomOutBtn = paneWrapper.querySelector(".pane-zoom-out-btn");
+                if (zoomOutBtn) {
+                    zoomOutBtn.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        paneObj.chart.zoomOut();
+                    });
+                }
 
                 const resetBtn = paneWrapper.querySelector(".pane-reset-btn");
                 if (resetBtn) {
@@ -784,6 +806,25 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (p.chart) p.chart.setTimezone(offset);
                     }
                     showToastNotification("Timezone", `Timezone updated to ${tzSelect.options[tzSelect.selectedIndex].text}`, "info");
+                });
+            }
+
+            // Zoom In & Zoom Out Buttons (Bottom Right)
+            const zoomInBtn = document.getElementById("chart-zoom-in-btn");
+            if (zoomInBtn) {
+                zoomInBtn.addEventListener("click", () => {
+                    for (const p of this.panes) {
+                        if (p.chart) p.chart.zoomIn();
+                    }
+                });
+            }
+
+            const zoomOutBtn = document.getElementById("chart-zoom-out-btn");
+            if (zoomOutBtn) {
+                zoomOutBtn.addEventListener("click", () => {
+                    for (const p of this.panes) {
+                        if (p.chart) p.chart.zoomOut();
+                    }
                 });
             }
 

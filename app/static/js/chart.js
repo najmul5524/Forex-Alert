@@ -164,19 +164,43 @@ class TradingChart {
             this.candleSeries = null;
         }
 
+        const sym = (this.currentSymbol || '').toUpperCase();
+        let precision = 2;
+        if (['EURUSD', 'GBPUSD', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'].includes(sym)) {
+            precision = 5;
+        } else if (['USDJPY', 'EURJPY', 'GBPJPY'].includes(sym)) {
+            precision = 3;
+        } else if (['XRPUSDT', 'XAGUSD'].includes(sym)) {
+            precision = 4;
+        } else if (['XAUUSD', 'USOIL', 'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'SPX500', 'NAS100', 'US30'].includes(sym)) {
+            precision = 2;
+        }
+        const minMove = 1 / Math.pow(10, precision);
+
+        const seriesOpts = {
+            priceFormat: {
+                type: 'price',
+                precision: precision,
+                minMove: minMove,
+            },
+        };
+
         const isDark = this.isDarkMode;
         if (type === 'bar') {
             this.candleSeries = this.chart.addBarSeries({
+                ...seriesOpts,
                 upColor: '#10b981',
                 downColor: '#f43f5e',
             });
         } else if (type === 'line') {
             this.candleSeries = this.chart.addLineSeries({
+                ...seriesOpts,
                 color: '#38bdf8',
                 lineWidth: 2,
             });
         } else if (type === 'area') {
             this.candleSeries = this.chart.addAreaSeries({
+                ...seriesOpts,
                 topColor: isDark ? 'rgba(56, 189, 248, 0.4)' : 'rgba(14, 165, 233, 0.3)',
                 bottomColor: isDark ? 'rgba(56, 189, 248, 0.0)' : 'rgba(14, 165, 233, 0.0)',
                 lineColor: '#38bdf8',
@@ -184,6 +208,7 @@ class TradingChart {
             });
         } else if (type === 'baseline') {
             this.candleSeries = this.chart.addBaselineSeries({
+                ...seriesOpts,
                 topLineColor: '#10b981',
                 topFillColor1: 'rgba(16, 185, 129, 0.28)',
                 topFillColor2: 'rgba(16, 185, 129, 0.05)',
@@ -194,6 +219,7 @@ class TradingChart {
         } else {
             // Standard Candlestick or Heikin-Ashi
             this.candleSeries = this.chart.addCandlestickSeries({
+                ...seriesOpts,
                 upColor: '#10b981',
                 downColor: '#f43f5e',
                 borderUpColor: '#10b981',
@@ -233,7 +259,7 @@ class TradingChart {
         if (!this.chart) return;
         try {
             this.chart.timeScale().scrollToRealTime();
-            this.chart.timeScale().resetTimeScale();
+            this.chart.timeScale().fitContent();
             this.chart.applyOptions({
                 rightPriceScale: {
                     autoScale: true
@@ -243,6 +269,36 @@ class TradingChart {
         } catch (e) {
             console.error("Error resetting chart view:", e);
         }
+    }
+
+    zoomIn() {
+        if (!this.chart) return;
+        try {
+            const range = this.chart.timeScale().getVisibleLogicalRange();
+            if (!range) return;
+            const span = range.to - range.from;
+            const delta = Math.max(1, span * 0.2);
+            this.chart.timeScale().setVisibleLogicalRange({
+                from: range.from + delta,
+                to: range.to - delta
+            });
+            this.redrawDrawings();
+        } catch(e) {}
+    }
+
+    zoomOut() {
+        if (!this.chart) return;
+        try {
+            const range = this.chart.timeScale().getVisibleLogicalRange();
+            if (!range) return;
+            const span = range.to - range.from;
+            const delta = Math.max(1, span * 0.2);
+            this.chart.timeScale().setVisibleLogicalRange({
+                from: range.from - delta,
+                to: range.to + delta
+            });
+            this.redrawDrawings();
+        } catch(e) {}
     }
 
     setTheme(isDark) {
@@ -271,11 +327,6 @@ class TradingChart {
                 },
             });
 
-            if (this.volumeSeries) {
-                this.volumeSeries.applyOptions({
-                    color: isDark ? '#38bdf8' : '#0284c7',
-                });
-            }
             this.redrawDrawings();
         } catch(e) {
             console.error("setTheme error:", e);
@@ -285,6 +336,7 @@ class TradingChart {
     async loadCandles(symbol, timeframe) {
         this.currentSymbol = symbol;
         this.currentTimeframe = timeframe;
+        this.createMainSeries(this.chartType);
         if (!this.candleSeries) return;
 
         try {
@@ -293,7 +345,12 @@ class TradingChart {
             if (data && Array.isArray(data) && data.length > 0) {
                 this.rawCandles = data;
                 this.renderCandlesData(data);
-                if (this.chart) this.chart.timeScale().fitContent();
+                if (this.chart) {
+                    this.chart.timeScale().fitContent();
+                    this.chart.applyOptions({
+                        rightPriceScale: { autoScale: true }
+                    });
+                }
 
                 // Refresh all active indicators
                 await this.refreshAllIndicators();

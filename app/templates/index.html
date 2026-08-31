@@ -26,7 +26,7 @@
     <!-- Custom Styles & Favicon -->
     <link rel="icon" type="image/png" href="/static/icon.png">
     <link rel="apple-touch-icon" href="/static/icon.png">
-    <link rel="stylesheet" href="/static/css/styles.css?v=3.1.0">
+    <link rel="stylesheet" href="/static/css/styles.css?v=3.2.0">
     <link rel="manifest" href="/static/manifest.json">
     <script>
         window.VAPID_PUBLIC_KEY = {{ vapid_public_key | tojson }};
@@ -215,8 +215,17 @@
                 <!-- Dynamically populated chart panes -->
             </div>
 
-            <!-- Bottom-Right Timezone Selector & Reset Button (TradingView Style) -->
+            <!-- Bottom-Right Timezone Selector, Zoom & Reset Toolbar (TradingView Style) -->
             <div class="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 select-none">
+                <!-- Zoom In Button -->
+                <button id="chart-zoom-in-btn" class="flex items-center justify-center w-7 h-7 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-lg border border-slate-200 dark:border-slate-800 shadow-md text-xs hover:bg-sky-50 dark:hover:bg-slate-800 font-bold text-slate-700 dark:text-slate-300 transition-all active:scale-90 cursor-pointer" title="Zoom In (TradingView Style)">
+                    <span>➕</span>
+                </button>
+                <!-- Zoom Out Button -->
+                <button id="chart-zoom-out-btn" class="flex items-center justify-center w-7 h-7 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-lg border border-slate-200 dark:border-slate-800 shadow-md text-xs hover:bg-sky-50 dark:hover:bg-slate-800 font-bold text-slate-700 dark:text-slate-300 transition-all active:scale-90 cursor-pointer" title="Zoom Out (TradingView Style)">
+                    <span>➖</span>
+                </button>
+
                 <!-- TradingView Reset View / Scroll to Realtime Button -->
                 <button id="chart-reset-btn" class="flex items-center gap-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-md text-[11px] hover:bg-sky-50 dark:hover:bg-slate-800 font-bold text-sky-600 dark:text-sky-400 transition-all active:scale-95 cursor-pointer" title="Reset Chart & Scroll to Current Candle (TradingView Style)">
                     <span>⏭️</span> <span class="hidden sm:inline">Reset</span>
@@ -690,8 +699,8 @@
     </div>
 
     <!-- Scripts with Cache Busting -->
-    <script src="/static/js/chart.js?v=3.1.0"></script>
-    <script src="/static/js/notifications.js?v=3.1.0"></script>
-    <script src="/static/js/app.js?v=3.1.0"></script>
+    <script src="/static/js/chart.js?v=3.2.0"></script>
+    <script src="/static/js/notifications.js?v=3.2.0"></script>
+    <script src="/static/js/app.js?v=3.2.0"></script>
 </body>
 </html>
