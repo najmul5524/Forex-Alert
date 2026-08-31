@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: najmul
+    name: najmul-fx
     env: python
     buildCommand: pip install --upgrade pip && pip install --prefer-binary -r requirements.txt
     startCommand: bash start.sh
