@@ -1,4 +1,4 @@
-﻿import time
+import time
 import math
 import random
 import re
@@ -56,7 +56,7 @@ class Candle:
         }
 
 class SymbolCandleStore:
-    def __init__(self, symbol: str, max_bars: int = 1500):
+    def __init__(self, symbol: str, max_bars: int = 10000):
         self.symbol = symbol
         self.max_bars = max_bars
         self.timeframe_candles: Dict[str, List[Candle]] = {
@@ -67,62 +67,70 @@ class SymbolCandleStore:
 
     def seed_initial_candles(self, base_price: float = 1.0850, volatility: float = 0.0004):
         now = int(time.time())
-        total_1m_bars = 1200
-        start_time = now - (total_1m_bars * 60)
-        curr_price = base_price
-        
-        cycle_len = 180
-        trend_direction = 1.0
 
-        for i in range(total_1m_bars):
-            bar_time = start_time + (i * 60)
-            
-            # Multi-wave sinusoidal trend simulation for realistic charts
-            if i % cycle_len == 0:
-                trend_direction = random.choice([-1.0, 1.0]) * random.uniform(0.5, 1.5)
+        # Timeframe-specific historical depth
+        tf_depths = {
+            "1w": (300, 604800, volatility * 5.0),   # 300 weeks (~6 years)
+            "1d": (1000, 86400, volatility * 3.0),   # 1000 days (~3 years)
+            "4h": (2000, 14400, volatility * 1.8),   # 2000 4h bars (~1 year)
+            "2h": (2000, 7200, volatility * 1.4),    # 2000 2h bars
+            "1h": (3000, 3600, volatility * 1.2),    # 3000 1h bars (~4 months)
+            "45m": (2000, 2700, volatility * 1.1),
+            "30m": (3000, 1800, volatility * 1.0),
+            "15m": (3000, 900, volatility * 0.8),
+            "5m": (3000, 300, volatility * 0.6),
+            "3m": (3000, 180, volatility * 0.5),
+            "1m": (3000, 60, volatility * 0.4),      # 3000 1m bars (~50 hours)
+        }
 
-            trend_bias = (math.sin(i / 30.0) + math.cos(i / 75.0)) * volatility * 0.4
-            noise = (random.random() - 0.498) * volatility
-            drift = (trend_direction * volatility * 0.15) + trend_bias + noise
+        for tf, (num_bars, sec, tf_vol) in tf_depths.items():
+            start_time = (now // sec) * sec - (num_bars * sec)
+            curr_p = base_price * (1.0 + (random.uniform(-0.04, 0.04)))
+            candles_list: List[Candle] = []
 
-            open_p = curr_price
-            close_p = open_p + drift
-            
-            wick_up = abs(random.random() * volatility * 0.6)
-            wick_down = abs(random.random() * volatility * 0.6)
-            high_p = max(open_p, close_p) + wick_up
-            low_p = min(open_p, close_p) - wick_down
-            vol = random.uniform(15.0, 250.0)
+            cycle_len = max(20, num_bars // 15)
+            trend = random.choice([-1.0, 1.0])
 
-            c = Candle(bar_time, open_p, high_p, low_p, close_p, vol)
-            self.timeframe_candles["1m"].append(c)
-            curr_price = close_p
+            for i in range(num_bars):
+                bar_time = start_time + (i * sec)
+                if i % cycle_len == 0:
+                    trend = random.choice([-1.0, 1.0]) * random.uniform(0.6, 1.4)
 
-        self.latest_tick_price = curr_price
-        self.prev_tick_price = curr_price
+                # Mean reversion back towards base_price near the end
+                progress = i / float(num_bars)
+                mean_pull = (base_price - curr_p) * 0.02 * (progress ** 2)
 
-        # Aggregate for all standard higher timeframes
-        for tf, sec in DEFAULT_TIMEFRAME_SECONDS.items():
-            if tf == "1m":
-                continue
-            bars_map: Dict[int, Candle] = {}
-            for c in self.timeframe_candles["1m"]:
-                bucket = (c.time // sec) * sec
-                if bucket not in bars_map:
-                    bars_map[bucket] = Candle(bucket, c.open, c.high, c.low, c.close, c.volume)
-                else:
-                    b = bars_map[bucket]
-                    b.high = max(b.high, c.high)
-                    b.low = min(b.low, c.low)
-                    b.close = c.close
-                    b.volume += c.volume
-            self.timeframe_candles[tf] = list(bars_map.values())
+                drift = (trend * tf_vol * 0.2) + mean_pull + ((random.random() - 0.495) * tf_vol)
+                open_p = curr_p
+                close_p = open_p + drift
 
-    def get_candles(self, timeframe: str = "1m", limit: int = 500) -> List[Candle]:
+                wick_up = abs(random.random() * tf_vol * 0.8)
+                wick_down = abs(random.random() * tf_vol * 0.8)
+                high_p = max(open_p, close_p) + wick_up
+                low_p = min(open_p, close_p) - wick_down
+                vol = random.uniform(20.0, 500.0)
+
+                candles_list.append(Candle(bar_time, open_p, high_p, low_p, close_p, vol))
+                curr_p = close_p
+
+            # Ensure the very last bar ends right at base_price
+            if candles_list:
+                candles_list[-1].close = base_price
+                candles_list[-1].high = max(candles_list[-1].high, base_price)
+                candles_list[-1].low = min(candles_list[-1].low, base_price)
+
+            self.timeframe_candles[tf] = candles_list
+
+        self.latest_tick_price = base_price
+        self.prev_tick_price = base_price
+
+    def get_candles(self, timeframe: str = "1m", limit: int = 5000) -> List[Candle]:
         tf = timeframe.lower().strip()
         sec = parse_timeframe_seconds(tf)
 
         if tf in self.timeframe_candles and self.timeframe_candles[tf]:
+            if limit <= 0 or limit >= len(self.timeframe_candles[tf]):
+                return self.timeframe_candles[tf]
             return self.timeframe_candles[tf][-limit:]
 
         # On-the-fly dynamic aggregation for custom arbitrary timeframes (e.g. 7m, 3h)
@@ -144,6 +152,8 @@ class SymbolCandleStore:
         
         aggregated = list(bars_map.values())
         self.timeframe_candles[tf] = aggregated
+        if limit <= 0 or limit >= len(aggregated):
+            return aggregated
         return aggregated[-limit:]
 
     def update_tick(self, price: float, volume: float = 1.0, timestamp: Optional[int] = None) -> List[Tuple[str, bool, Candle]]:

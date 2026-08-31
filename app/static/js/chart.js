@@ -276,7 +276,7 @@ class TradingChart {
         if (!this.candleSeries) return;
 
         try {
-            const resp = await fetch(`/api/market/candles?symbol=${symbol}&timeframe=${timeframe}&limit=1200`);
+            const resp = await fetch(`/api/market/candles?symbol=${symbol}&timeframe=${timeframe}&limit=5000`);
             const data = await resp.json();
             if (data && Array.isArray(data) && data.length > 0) {
                 this.rawCandles = data;
@@ -295,12 +295,23 @@ class TradingChart {
     renderCandlesData(data) {
         if (!data || data.length === 0 || !this.candleSeries) return;
 
+        // Sort ascending and remove duplicate timestamps
+        const sorted = [...data].sort((a, b) => a.time - b.time);
+        const uniqueData = [];
+        const seen = new Set();
+        for (const item of sorted) {
+            if (!seen.has(item.time)) {
+                seen.add(item.time);
+                uniqueData.push(item);
+            }
+        }
+
         const tzOffset = this.timezoneOffsetSeconds || 0;
         let formattedData = [];
 
         if (this.chartType === 'heikin_ashi') {
-            let haOpen = (data[0].open + data[0].close) / 2.0;
-            formattedData = data.map((c, idx) => {
+            let haOpen = (uniqueData[0].open + uniqueData[0].close) / 2.0;
+            formattedData = uniqueData.map((c, idx) => {
                 const haClose = (c.open + c.high + c.low + c.close) / 4.0;
                 if (idx > 0) {
                     haOpen = (haOpen + formattedData[idx - 1].close) / 2.0;
@@ -316,13 +327,13 @@ class TradingChart {
                 };
             });
         } else if (['line', 'area', 'baseline'].includes(this.chartType)) {
-            formattedData = data.map(c => ({
+            formattedData = uniqueData.map(c => ({
                 time: c.time + tzOffset,
                 value: c.close
             }));
         } else {
             // Standard Candlestick or OHLC Bars
-            formattedData = data.map(c => ({
+            formattedData = uniqueData.map(c => ({
                 time: c.time + tzOffset,
                 open: c.open,
                 high: c.high,
@@ -331,7 +342,7 @@ class TradingChart {
             }));
         }
 
-        const volData = data.map(c => ({
+        const volData = uniqueData.map(c => ({
             time: c.time + tzOffset,
             value: c.volume || 1.0,
             color: c.close >= c.open 
@@ -339,11 +350,15 @@ class TradingChart {
                 : (this.isDarkMode ? '#88133788' : '#fecdd388')
         }));
 
-        this.candleSeries.setData(formattedData);
-        if (this.volumeSeries) this.volumeSeries.setData(volData);
+        try {
+            this.candleSeries.setData(formattedData);
+            if (this.volumeSeries) this.volumeSeries.setData(volData);
+        } catch (err) {
+            console.warn("Series setData warning:", err);
+        }
 
         // Track last forming candle
-        const last = data[data.length - 1];
+        const last = uniqueData[uniqueData.length - 1];
         const lastVol = volData[volData.length - 1];
         this.currentCandle = {
             time: last.time,
@@ -386,6 +401,7 @@ class TradingChart {
             const nowTs = tickData.timestamp || Math.floor(Date.now() / 1000);
             const bucket = Math.floor(nowTs / tfSec) * tfSec;
             const volume = tickData.volume || 1.0;
+            const tzOffset = this.timezoneOffsetSeconds || 0;
 
             if (!this.currentCandle || bucket > this.currentCandle.time) {
                 // New bar for the active timeframe has opened
@@ -405,17 +421,24 @@ class TradingChart {
                 this.currentCandle.volume = (this.currentCandle.volume || 0) + volume;
             }
 
-            this.candleSeries.update({
-                time: this.currentCandle.time,
-                open: this.currentCandle.open,
-                high: this.currentCandle.high,
-                low: this.currentCandle.low,
-                close: this.currentCandle.close,
-            });
+            if (['line', 'area', 'baseline'].includes(this.chartType)) {
+                this.candleSeries.update({
+                    time: this.currentCandle.time + tzOffset,
+                    value: price
+                });
+            } else {
+                this.candleSeries.update({
+                    time: this.currentCandle.time + tzOffset,
+                    open: this.currentCandle.open,
+                    high: this.currentCandle.high,
+                    low: this.currentCandle.low,
+                    close: this.currentCandle.close,
+                });
+            }
 
             if (this.volumeSeries) {
                 this.volumeSeries.update({
-                    time: this.currentCandle.time,
+                    time: this.currentCandle.time + tzOffset,
                     value: this.currentCandle.volume,
                     color: this.currentCandle.close >= this.currentCandle.open 
                         ? (this.isDarkMode ? '#064e3b88' : '#a7f3d088') 

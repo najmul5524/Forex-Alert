@@ -1,4 +1,4 @@
-﻿from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Query, HTTPException, Body
 import pandas as pd
 from app.engine.candle_manager import candle_manager, parse_timeframe_seconds
@@ -24,7 +24,7 @@ async def get_supported_symbols():
 async def get_candles(
     symbol: str = Query(...),
     timeframe: str = Query(default="1m"),
-    limit: int = Query(default=1000, le=1500)
+    limit: int = Query(default=5000, le=10000)
 ):
     clean_sym = symbol.upper().replace("/", "").replace("-", "")
     store = candle_manager.get_or_create_store(clean_sym)
@@ -49,7 +49,7 @@ async def get_indicators(
 ):
     clean_sym = symbol.upper().replace("/", "").replace("-", "")
     store = candle_manager.get_or_create_store(clean_sym)
-    df = store.get_dataframe(timeframe, limit=1200)
+    df = store.get_dataframe(timeframe, limit=5000)
     if df.empty:
         return []
 
