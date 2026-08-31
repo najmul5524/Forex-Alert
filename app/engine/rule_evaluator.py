@@ -19,7 +19,7 @@ def can_trigger_now(
     current_bar_time: int,
     is_bar_close: bool
 ) -> bool:
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
     if trigger_frequency == "once_per_bar_close" and not is_bar_close:
         return False
@@ -43,7 +43,7 @@ def evaluate_alert_condition(
     current_bar_time: int,
     is_bar_close: bool
 ) -> RuleEvaluationResult:
-    condition_type = alert_dict.get("condition_type", "")
+    condition_type = alert_dict.get("condition_type", "").lower().strip()
     params = alert_dict.get("params", {})
     symbol = alert_dict.get("symbol", "")
     timeframe = alert_dict.get("timeframe", "1m")
@@ -62,7 +62,7 @@ def evaluate_alert_condition(
 
     curr_p = current_price
 
-    if condition_type == "price_cross_up":
+    if condition_type in ("price_cross_up", "price_cross_above", "crossing_up", "crossing_above"):
         target = float(params.get("target_price", 0.0))
         if prev_p <= target and curr_p > target:
             summary = f"{symbol} crossed ABOVE {target:.5f} (Current: {curr_p:.5f})"
@@ -74,7 +74,7 @@ def evaluate_alert_condition(
                 should_deactivate=(freq == "only_once")
             )
 
-    elif condition_type == "price_cross_down":
+    elif condition_type in ("price_cross_down", "price_cross_below", "crossing_down", "crossing_below"):
         target = float(params.get("target_price", 0.0))
         if prev_p >= target and curr_p < target:
             summary = f"{symbol} crossed BELOW {target:.5f} (Current: {curr_p:.5f})"
@@ -86,7 +86,7 @@ def evaluate_alert_condition(
                 should_deactivate=(freq == "only_once")
             )
 
-    elif condition_type == "price_greater":
+    elif condition_type in ("price_greater", "greater_than"):
         target = float(params.get("target_price", 0.0))
         if curr_p >= target:
             summary = f"{symbol} is GREATER than {target:.5f} (Current: {curr_p:.5f})"
@@ -98,7 +98,7 @@ def evaluate_alert_condition(
                 should_deactivate=(freq == "only_once")
             )
 
-    elif condition_type == "price_less":
+    elif condition_type in ("price_less", "less_than"):
         target = float(params.get("target_price", 0.0))
         if curr_p <= target:
             summary = f"{symbol} is LESS than {target:.5f} (Current: {curr_p:.5f})"
@@ -110,7 +110,7 @@ def evaluate_alert_condition(
                 should_deactivate=(freq == "only_once")
             )
 
-    elif condition_type == "price_cross_indicator":
+    elif condition_type in ("price_cross_indicator", "price_crosses_indicator"):
         ind_cfg = params.get("indicator", {})
         direction = params.get("direction", "above")
         if candles_df is not None and len(candles_df) >= 2:
@@ -122,7 +122,7 @@ def evaluate_alert_condition(
 
             ind_name = f"{ind_cfg.get('type', '').upper()} ({ind_cfg.get('period', '')})"
             
-            if direction in ("above", "up", "cross_up"):
+            if direction in ("above", "up", "cross_up", "crossing_up"):
                 if prev_candle_p <= prev_ind and curr_candle_p > curr_ind:
                     summary = f"{symbol} price ({curr_candle_p:.5f}) crossed ABOVE {ind_name} ({curr_ind:.5f})"
                     return RuleEvaluationResult(
@@ -143,7 +143,7 @@ def evaluate_alert_condition(
                         should_deactivate=(freq == "only_once")
                     )
 
-    elif condition_type == "indicator_cross_indicator":
+    elif condition_type in ("indicator_cross_indicator", "indicator_crosses_indicator"):
         ind1_cfg = params.get("indicator_1", {})
         ind2_cfg = params.get("indicator_2", {})
         direction = params.get("direction", "above")
@@ -160,7 +160,7 @@ def evaluate_alert_condition(
             name1 = f"{ind1_cfg.get('type', '').upper()}({ind1_cfg.get('period', '')})"
             name2 = f"{ind2_cfg.get('type', '').upper()}({ind2_cfg.get('period', '')})"
 
-            if direction in ("above", "up", "cross_up"):
+            if direction in ("above", "up", "cross_up", "crossing_up"):
                 if prev_i1 <= prev_i2 and curr_i1 > curr_i2:
                     summary = f"{symbol} {name1} ({curr_i1:.4f}) crossed ABOVE {name2} ({curr_i2:.4f})"
                     return RuleEvaluationResult(
@@ -181,7 +181,7 @@ def evaluate_alert_condition(
                         should_deactivate=(freq == "only_once")
                     )
 
-    elif condition_type == "indicator_cross_value":
+    elif condition_type in ("indicator_cross_value", "indicator_crosses_value"):
         ind_cfg = params.get("indicator", {})
         threshold = float(params.get("threshold", 70.0))
         direction = params.get("direction", "above")
@@ -193,7 +193,7 @@ def evaluate_alert_condition(
 
             ind_name = f"{ind_cfg.get('type', '').upper()} ({ind_cfg.get('period', '')})"
 
-            if direction in ("above", "up", "cross_up"):
+            if direction in ("above", "up", "cross_up", "crossing_up"):
                 if prev_ind <= threshold and curr_ind > threshold:
                     summary = f"{symbol} {ind_name} ({curr_ind:.2f}) crossed ABOVE {threshold:.2f}"
                     return RuleEvaluationResult(
@@ -214,7 +214,7 @@ def evaluate_alert_condition(
                         should_deactivate=(freq == "only_once")
                     )
 
-    elif condition_type == "channel_exit":
+    elif condition_type in ("channel_exit", "exiting_channel"):
         lower = float(params.get("lower_bound", 0.0))
         upper = float(params.get("upper_bound", 0.0))
         if curr_p < lower or curr_p > upper:
@@ -227,7 +227,7 @@ def evaluate_alert_condition(
                 should_deactivate=(freq == "only_once")
             )
 
-    elif condition_type == "channel_enter":
+    elif condition_type in ("channel_enter", "entering_channel"):
         lower = float(params.get("lower_bound", 0.0))
         upper = float(params.get("upper_bound", 0.0))
         if prev_p < lower or prev_p > upper:

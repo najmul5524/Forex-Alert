@@ -2,11 +2,33 @@
 import numpy as np
 from typing import Dict, Any, Tuple, Optional
 
+def get_source_series(df: pd.DataFrame, source: str = "close") -> pd.Series:
+    src = source.lower().strip()
+    if src == "open" and "open" in df.columns: return df["open"]
+    if src == "high" and "high" in df.columns: return df["high"]
+    if src == "low" and "low" in df.columns: return df["low"]
+    if src == "hl2" and "high" in df.columns and "low" in df.columns:
+        return (df["high"] + df["low"]) / 2.0
+    if src == "hlc3" and "high" in df.columns and "low" in df.columns and "close" in df.columns:
+        return (df["high"] + df["low"] + df["close"]) / 3.0
+    if src == "ohlc4" and "open" in df.columns and "high" in df.columns and "low" in df.columns and "close" in df.columns:
+        return (df["open"] + df["high"] + df["low"] + df["close"]) / 4.0
+    return df["close"] if "close" in df.columns else pd.Series(dtype=float)
+
 def calculate_sma(series: pd.Series, period: int) -> pd.Series:
     return series.rolling(window=period, min_periods=1).mean()
 
 def calculate_ema(series: pd.Series, period: int) -> pd.Series:
     return series.ewm(span=period, adjust=False).mean()
+
+def calculate_wma(series: pd.Series, period: int) -> pd.Series:
+    weights = np.arange(1, period + 1)
+    def wma_calc(window):
+        if len(window) < period:
+            w = np.arange(1, len(window) + 1)
+            return np.dot(window, w) / w.sum()
+        return np.dot(window, weights) / weights.sum()
+    return series.rolling(window=period, min_periods=1).apply(wma_calc, raw=True)
 
 def calculate_rsi(series: pd.Series, period: int = 14) -> pd.Series:
     delta = series.diff()
@@ -54,8 +76,8 @@ def calculate_stochastic(high: pd.Series, low: pd.Series, close: pd.Series, k_pe
 
 def calculate_indicator_value(df: pd.DataFrame, indicator_cfg: Dict[str, Any]) -> pd.Series:
     ind_type = indicator_cfg.get("type", "ema").lower()
-    source_col = indicator_cfg.get("source", "close")
-    source = df[source_col] if source_col in df.columns else df["close"]
+    source_name = indicator_cfg.get("source", "close")
+    source = get_source_series(df, source_name)
 
     if ind_type == "sma":
         period = int(indicator_cfg.get("period", 20))
@@ -63,6 +85,9 @@ def calculate_indicator_value(df: pd.DataFrame, indicator_cfg: Dict[str, Any]) -
     elif ind_type == "ema":
         period = int(indicator_cfg.get("period", 20))
         return calculate_ema(source, period)
+    elif ind_type == "wma":
+        period = int(indicator_cfg.get("period", 20))
+        return calculate_wma(source, period)
     elif ind_type == "rsi":
         period = int(indicator_cfg.get("period", 14))
         return calculate_rsi(source, period)
@@ -98,4 +123,4 @@ def calculate_indicator_value(df: pd.DataFrame, indicator_cfg: Dict[str, Any]) -
         k, d = calculate_stochastic(df["high"], df["low"], df["close"], k_period, d_period, smooth_k)
         return d if output == "d" else k
     else:
-        return source
+        return calculate_ema(source, 20)

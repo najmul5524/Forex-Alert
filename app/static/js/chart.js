@@ -4,23 +4,34 @@
         this.chart = null;
         this.candleSeries = null;
         this.volumeSeries = null;
-        this.indicatorSeries = {};
         this.alertPriceLines = [];
         this.currentSymbol = 'EURUSD';
         this.currentTimeframe = '1m';
         this.isDarkMode = true;
-        this.activeIndicators = {
-            ema20: false,
-            ema50: false,
-            ema200: false,
-            bb: false
-        };
+        this.candlesData = [];
+
+        // Active dynamic indicators: Array of { id, type, name, params, color, visible, seriesList: [] }
+        this.indicators = [];
+        this.indicatorCounter = 0;
+
+        // Drawing state
+        this.activeTool = 'cursor'; // cursor, horizontal_ray, trendline, fibonacci, measure
+        this.drawings = []; // Array of drawing objects
+        this.currentDrawing = null;
+        this.overlayCanvas = null;
+        this.overlayCtx = null;
+
+        // Callbacks
+        this.onLegendUpdate = null;
+        this.onPriceScaleAlertClick = null;
+        this.onCrosshairMoveCallback = null;
+
         this.init();
     }
 
     init() {
         if (!this.container || typeof LightweightCharts === 'undefined') {
-            console.warn("LightweightCharts library or container not ready yet.");
+            console.warn("Chart container or LightweightCharts not ready.");
             return;
         }
 
@@ -28,9 +39,12 @@
             const isDark = document.documentElement.classList.contains('dark');
             this.isDarkMode = isDark;
 
+            // Make sure container has position relative for overlay canvas
+            this.container.style.position = 'relative';
+
             this.chart = LightweightCharts.createChart(this.container, {
                 width: this.container.clientWidth || 800,
-                height: this.container.clientHeight || 450,
+                height: this.container.clientHeight || 500,
                 layout: {
                     background: { color: isDark ? '#0f172a' : '#ffffff' },
                     textColor: isDark ? '#94a3b8' : '#475569',
@@ -56,17 +70,18 @@
                     borderColor: isDark ? '#334155' : '#cbd5e1',
                     timeVisible: true,
                     secondsVisible: false,
+                    rightOffset: 12,
                 },
                 rightPriceScale: {
                     borderColor: isDark ? '#334155' : '#cbd5e1',
                     scaleMargins: {
-                        top: 0.1,
-                        bottom: 0.15,
+                        top: 0.08,
+                        bottom: 0.18,
                     },
                 },
             });
 
-            // Add main candlestick series with TradingView green/red palette
+            // Main candlestick series
             this.candleSeries = this.chart.addCandlestickSeries({
                 upColor: '#10b981',
                 downColor: '#f43f5e',
@@ -76,7 +91,7 @@
                 wickDownColor: '#f43f5e',
             });
 
-            // Add volume histogram series
+            // Volume histogram
             this.volumeSeries = this.chart.addHistogramSeries({
                 color: isDark ? '#38bdf8' : '#0284c7',
                 priceFormat: {
@@ -84,19 +99,46 @@
                 },
                 priceScaleId: '',
                 scaleMargins: {
-                    top: 0.82,
+                    top: 0.84,
                     bottom: 0,
                 },
             });
 
-            // Resize handler
+            // Setup crosshair move for OHLCV tracking
+            this.chart.subscribeCrosshairMove((param) => {
+                if (!param || !param.time || !param.seriesPrices) {
+                    if (this.onCrosshairMoveCallback) this.onCrosshairMoveCallback(null);
+                    return;
+                }
+                const candle = param.seriesPrices.get(this.candleSeries);
+                const volume = param.seriesPrices.get(this.volumeSeries);
+                if (candle && this.onCrosshairMoveCallback) {
+                    this.onCrosshairMoveCallback({
+                        time: param.time,
+                        open: candle.open,
+                        high: candle.high,
+                        low: candle.low,
+                        close: candle.close,
+                        volume: volume || 0
+                    });
+                }
+            });
+
+            this.setupDrawingCanvas();
+
+            // Window resize handler
             window.addEventListener('resize', () => {
                 if (this.chart && this.container) {
                     this.chart.applyOptions({ width: this.container.clientWidth });
+                    this.resizeDrawingCanvas();
                 }
             });
-        } catch(e) {
-            console.error("Chart creation error:", e);
+
+            // Add default starter indicators (EMA 20 & EMA 50)
+            this.addIndicator('ema', { period: 20, source: 'close' }, '#38bdf8');
+            this.addIndicator('ema', { period: 50, source: 'close' }, '#fbbf24');
+        } catch (e) {
+            console.error("TradingChart init failed:", e);
         }
     }
 
@@ -131,8 +173,9 @@
                     color: isDark ? '#38bdf8' : '#0284c7',
                 });
             }
+            this.redrawDrawings();
         } catch(e) {
-            console.error("Set theme on chart error:", e);
+            console.error("setTheme error:", e);
         }
     }
 
@@ -142,9 +185,10 @@
         if (!this.candleSeries) return;
 
         try {
-            const resp = await fetch(`/api/market/candles?symbol=${symbol}&timeframe=${timeframe}&limit=300`);
+            const resp = await fetch(`/api/market/candles?symbol=${symbol}&timeframe=${timeframe}&limit=1200`);
             const data = await resp.json();
             if (data && Array.isArray(data) && data.length > 0) {
+                this.candlesData = data;
                 const candleData = data.map(c => ({
                     time: c.time,
                     open: c.open,
@@ -162,8 +206,9 @@
                 if (this.volumeSeries) this.volumeSeries.setData(volData);
                 if (this.chart) this.chart.timeScale().fitContent();
 
-                // Refresh active overlays
-                await this.refreshIndicators();
+                // Refresh all active indicators
+                await this.refreshAllIndicators();
+                this.redrawDrawings();
             }
         } catch (e) {
             console.error('Failed to load candles:', e);
@@ -196,6 +241,340 @@
         }
     }
 
+    // ==========================================
+    // DYNAMIC INDICATOR MANAGEMENT (TradingView style)
+    // ==========================================
+    async addIndicator(type, params = {}, color = '#38bdf8') {
+        const id = `ind_${++this.indicatorCounter}`;
+        const indType = type.toLowerCase();
+        let name = indType.toUpperCase();
+        if (params.period) name += ` ${params.period}`;
+        if (params.source) name += ` ${params.source}`;
+
+        const indObj = {
+            id: id,
+            type: indType,
+            name: name,
+            params: { period: 20, source: 'close', std_dev: 2.0, fast: 12, slow: 26, signal: 9, ...params },
+            color: color,
+            visible: true,
+            currentValue: null,
+            seriesList: []
+        };
+
+        this.indicators.push(indObj);
+        await this._renderIndicator(indObj);
+        this._notifyLegendUpdate();
+        return indObj;
+    }
+
+    async removeIndicator(id) {
+        const idx = this.indicators.findIndex(i => i.id === id);
+        if (idx === -1) return;
+
+        const ind = this.indicators[idx];
+        for (const s of ind.seriesList) {
+            try { this.chart.removeSeries(s); } catch (e) {}
+        }
+        this.indicators.splice(idx, 1);
+        this._notifyLegendUpdate();
+    }
+
+    async toggleIndicatorVisibility(id) {
+        const ind = this.indicators.find(i => i.id === id);
+        if (!ind) return;
+
+        ind.visible = !ind.visible;
+        if (!ind.visible) {
+            for (const s of ind.seriesList) {
+                try { this.chart.removeSeries(s); } catch (e) {}
+            }
+            ind.seriesList = [];
+        } else {
+            await this._renderIndicator(ind);
+        }
+        this._notifyLegendUpdate();
+    }
+
+    async updateIndicatorParams(id, newParams, newColor) {
+        const ind = this.indicators.find(i => i.id === id);
+        if (!ind) return;
+
+        ind.params = { ...ind.params, ...newParams };
+        if (newColor) ind.color = newColor;
+
+        let name = ind.type.toUpperCase();
+        if (ind.params.period) name += ` ${ind.params.period}`;
+        if (ind.params.source) name += ` ${ind.params.source}`;
+        ind.name = name;
+
+        // Clear existing series & rerender
+        for (const s of ind.seriesList) {
+            try { this.chart.removeSeries(s); } catch (e) {}
+        }
+        ind.seriesList = [];
+
+        if (ind.visible) {
+            await this._renderIndicator(ind);
+        }
+        this._notifyLegendUpdate();
+    }
+
+    async refreshAllIndicators() {
+        for (const ind of this.indicators) {
+            for (const s of ind.seriesList) {
+                try { this.chart.removeSeries(s); } catch (e) {}
+            }
+            ind.seriesList = [];
+            if (ind.visible) {
+                await this._renderIndicator(ind);
+            }
+        }
+        this._notifyLegendUpdate();
+    }
+
+    async _renderIndicator(ind) {
+        if (!this.chart) return;
+
+        const p = ind.params;
+        try {
+            if (ind.type in { ema: 1, sma: 1, wma: 1, rsi: 1, atr: 1 }) {
+                let url = `/api/market/indicators?symbol=${this.currentSymbol}&timeframe=${this.currentTimeframe}&ind_type=${ind.type}&period=${p.period || 14}&source=${p.source || 'close'}`;
+                const resp = await fetch(url);
+                const data = await resp.json();
+                if (data && Array.isArray(data) && data.length > 0) {
+                    const lineSeries = this.chart.addLineSeries({
+                        color: ind.color,
+                        lineWidth: 1.5,
+                        title: ind.name,
+                        priceLineVisible: false,
+                    });
+                    lineSeries.setData(data);
+                    ind.seriesList.push(lineSeries);
+                    ind.currentValue = data[data.length - 1].value;
+                }
+            } else if (ind.type in { bollinger: 1, bb: 1 }) {
+                // Fetch Upper, Middle, Lower
+                for (const band of ['upper', 'middle', 'lower']) {
+                    let url = `/api/market/indicators?symbol=${this.currentSymbol}&timeframe=${this.currentTimeframe}&ind_type=bollinger&period=${p.period || 20}&std_dev=${p.std_dev || 2.0}&source=${p.source || 'close'}&output=${band}`;
+                    const resp = await fetch(url);
+                    const data = await resp.json();
+                    if (data && Array.isArray(data) && data.length > 0) {
+                        const lineSeries = this.chart.addLineSeries({
+                            color: band === 'middle' ? '#94a3b8' : ind.color,
+                            lineWidth: band === 'middle' ? 1 : 1.5,
+                            lineStyle: band === 'middle' ? LightweightCharts.LineStyle.Dotted : LightweightCharts.LineStyle.Solid,
+                            title: `BB ${band.toUpperCase()}`,
+                            priceLineVisible: false,
+                        });
+                        lineSeries.setData(data);
+                        ind.seriesList.push(lineSeries);
+                        if (band === 'upper') ind.currentValue = data[data.length - 1].value;
+                    }
+                }
+            } else if (ind.type === 'macd') {
+                // Fetch MACD and Signal
+                for (const out of ['macd', 'signal']) {
+                    let url = `/api/market/indicators?symbol=${this.currentSymbol}&timeframe=${this.currentTimeframe}&ind_type=macd&fast=${p.fast || 12}&slow=${p.slow || 26}&signal=${p.signal || 9}&output=${out}`;
+                    const resp = await fetch(url);
+                    const data = await resp.json();
+                    if (data && Array.isArray(data) && data.length > 0) {
+                        const lineSeries = this.chart.addLineSeries({
+                            color: out === 'macd' ? ind.color : '#f43f5e',
+                            lineWidth: 1.5,
+                            title: `MACD ${out.toUpperCase()}`,
+                            priceLineVisible: false,
+                        });
+                        lineSeries.setData(data);
+                        ind.seriesList.push(lineSeries);
+                        if (out === 'macd') ind.currentValue = data[data.length - 1].value;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(`Error rendering indicator ${ind.name}:`, e);
+        }
+    }
+
+    _notifyLegendUpdate() {
+        if (this.onLegendUpdate) {
+            this.onLegendUpdate([...this.indicators]);
+        }
+    }
+
+    // ==========================================
+    // DRAWING TOOLS (TradingView Canvas Overlay)
+    // ==========================================
+    setupDrawingCanvas() {
+        this.overlayCanvas = document.createElement('canvas');
+        this.overlayCanvas.className = 'absolute inset-0 pointer-events-none z-10';
+        this.overlayCanvas.style.width = '100%';
+        this.overlayCanvas.style.height = '100%';
+        this.container.appendChild(this.overlayCanvas);
+        this.overlayCtx = this.overlayCanvas.getContext('2d');
+        this.resizeDrawingCanvas();
+
+        // Mouse drawing events on container
+        this.container.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        this.container.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        this.container.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+    }
+
+    resizeDrawingCanvas() {
+        if (!this.overlayCanvas || !this.container) return;
+        const rect = this.container.getBoundingClientRect();
+        this.overlayCanvas.width = rect.width;
+        this.overlayCanvas.height = rect.height;
+        this.redrawDrawings();
+    }
+
+    setDrawingTool(tool) {
+        this.activeTool = tool;
+        if (tool === 'cursor') {
+            this.container.style.cursor = 'crosshair';
+        } else if (tool === 'clear') {
+            this.drawings = [];
+            this.redrawDrawings();
+            this.activeTool = 'cursor';
+        } else {
+            this.container.style.cursor = 'crosshair';
+        }
+    }
+
+    handleMouseDown(e) {
+        if (this.activeTool === 'cursor' || !this.overlayCtx) return;
+
+        const rect = this.container.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if (this.activeTool === 'horizontal_ray') {
+            const price = this.candleSeries.coordinateToPrice(y);
+            this.drawings.push({
+                type: 'horizontal_ray',
+                y: y,
+                price: price,
+                color: '#f59e0b'
+            });
+            this.redrawDrawings();
+            this.activeTool = 'cursor';
+        } else if (this.activeTool in { trendline: 1, fibonacci: 1, measure: 1 }) {
+            this.currentDrawing = {
+                type: this.activeTool,
+                startX: x,
+                startY: y,
+                endX: x,
+                endY: y,
+                color: '#38bdf8'
+            };
+        }
+    }
+
+    handleMouseMove(e) {
+        if (!this.currentDrawing) return;
+
+        const rect = this.container.getBoundingClientRect();
+        this.currentDrawing.endX = e.clientX - rect.left;
+        this.currentDrawing.endY = e.clientY - rect.top;
+        this.redrawDrawings();
+    }
+
+    handleMouseUp(e) {
+        if (this.currentDrawing) {
+            this.drawings.push(this.currentDrawing);
+            this.currentDrawing = null;
+            this.redrawDrawings();
+            this.activeTool = 'cursor';
+        }
+    }
+
+    redrawDrawings() {
+        if (!this.overlayCtx || !this.overlayCanvas) return;
+
+        const ctx = this.overlayCtx;
+        ctx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+
+        const all = [...this.drawings];
+        if (this.currentDrawing) all.push(this.currentDrawing);
+
+        for (const d of all) {
+            if (d.type === 'horizontal_ray') {
+                ctx.save();
+                ctx.strokeStyle = d.color || '#f59e0b';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(0, d.y);
+                ctx.lineTo(this.overlayCanvas.width, d.y);
+                ctx.stroke();
+
+                // Price label tag
+                if (d.price) {
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.fillRect(this.overlayCanvas.width - 70, d.y - 10, 65, 20);
+                    ctx.fillStyle = '#000000';
+                    ctx.font = 'bold 10px monospace';
+                    ctx.fillText(d.price.toFixed(4), this.overlayCanvas.width - 65, d.y + 4);
+                }
+                ctx.restore();
+            } else if (d.type === 'trendline') {
+                ctx.save();
+                ctx.strokeStyle = d.color || '#38bdf8';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(d.startX, d.startY);
+                ctx.lineTo(d.endX, d.endY);
+                ctx.stroke();
+
+                // Endpoint handles
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath(); ctx.arc(d.startX, d.startY, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(d.endX, d.endY, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            } else if (d.type === 'fibonacci') {
+                ctx.save();
+                const fibLevels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0];
+                const dy = d.endY - d.startY;
+                const colors = ['#f43f5e', '#fb923c', '#fbbf24', '#34d399', '#38bdf8', '#818cf8', '#a855f7'];
+
+                fibLevels.forEach((level, idx) => {
+                    const y = d.startY + (dy * level);
+                    ctx.strokeStyle = colors[idx % colors.length];
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.min(d.startX, d.endX), y);
+                    ctx.lineTo(this.overlayCanvas.width, y);
+                    ctx.stroke();
+
+                    ctx.fillStyle = colors[idx % colors.length];
+                    ctx.font = '10px sans-serif';
+                    ctx.fillText(`Fib ${(level * 100).toFixed(1)}%`, Math.min(d.startX, d.endX) + 5, y - 3);
+                });
+                ctx.restore();
+            } else if (d.type === 'measure') {
+                ctx.save();
+                const minX = Math.min(d.startX, d.endX);
+                const maxX = Math.max(d.startX, d.endX);
+                const minY = Math.min(d.startY, d.endY);
+                const maxY = Math.max(d.startY, d.endY);
+
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+                ctx.fillRect(minX, minY, maxX - minX, maxY - minY);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillText(`Δ Price Range`, minX + 8, minY + 18);
+                ctx.restore();
+            }
+        }
+    }
+
+    // ==========================================
+    // ALERTS & PRICE SCALE INTEGRATION
+    // ==========================================
     setAlertPriceLines(alerts) {
         if (!this.candleSeries) return;
 
@@ -217,64 +596,14 @@
                     const line = this.candleSeries.createPriceLine({
                         price: parseFloat(target),
                         color: '#f59e0b',
-                        lineWidth: 1,
+                        lineWidth: 1.5,
                         lineStyle: LightweightCharts.LineStyle.Dashed,
                         axisLabelVisible: true,
-                        title: `ALERT #${a.id} (${(a.condition_type || '').replace('_', ' ')})`,
+                        title: `🔔 ALERT #${a.id} (${(a.condition_type || '').replace('_', ' ')})`,
                     });
                     this.alertPriceLines.push(line);
                 } catch(e) {}
             }
-        }
-    }
-
-    toggleIndicator(name, isEnabled) {
-        this.activeIndicators[name] = isEnabled;
-        this.refreshIndicators();
-    }
-
-    async refreshIndicators() {
-        if (!this.chart) return;
-
-        for (const key of Object.keys(this.indicatorSeries)) {
-            try { this.chart.removeSeries(this.indicatorSeries[key]); } catch (e) {}
-        }
-        this.indicatorSeries = {};
-
-        if (this.activeIndicators.ema20) {
-            await this._addIndicatorLine('ema', 20, '#38bdf8', 'EMA 20', 'ema20');
-        }
-        if (this.activeIndicators.ema50) {
-            await this._addIndicatorLine('ema', 50, '#fbbf24', 'EMA 50', 'ema50');
-        }
-        if (this.activeIndicators.ema200) {
-            await this._addIndicatorLine('ema', 200, '#f43f5e', 'EMA 200', 'ema200');
-        }
-        if (this.activeIndicators.bb) {
-            await this._addIndicatorLine('bollinger', 20, '#818cf8', 'BB Upper', 'bb_upper', 'upper');
-            await this._addIndicatorLine('bollinger', 20, '#94a3b8', 'BB Mid', 'bb_mid', 'middle');
-            await this._addIndicatorLine('bollinger', 20, '#818cf8', 'BB Lower', 'bb_lower', 'lower');
-        }
-    }
-
-    async _addIndicatorLine(type, period, color, title, key, output = null) {
-        try {
-            let url = `/api/market/indicators?symbol=${this.currentSymbol}&timeframe=${this.currentTimeframe}&ind_type=${type}&period=${period}`;
-            if (output) url += `&output=${output}`;
-            const resp = await fetch(url);
-            const data = await resp.json();
-            if (data && Array.isArray(data) && data.length > 0 && this.chart) {
-                const lineSeries = this.chart.addLineSeries({
-                    color: color,
-                    lineWidth: 1.5,
-                    title: title,
-                    priceLineVisible: false,
-                });
-                lineSeries.setData(data);
-                this.indicatorSeries[key] = lineSeries;
-            }
-        } catch (e) {
-            console.error('Failed to load indicator:', e);
         }
     }
 }

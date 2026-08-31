@@ -1,7 +1,7 @@
 ﻿from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Query, HTTPException, Body
 import pandas as pd
-from app.engine.candle_manager import candle_manager, TIMEFRAME_SECONDS
+from app.engine.candle_manager import candle_manager, parse_timeframe_seconds
 from app.engine.market_feed import SUPPORTED_SYMBOLS, market_feed
 from app.engine.indicators import calculate_indicator_value
 
@@ -22,34 +22,49 @@ async def get_supported_symbols():
 
 @router.get("/candles")
 async def get_candles(
-    symbol: str = Query(..., example="EURUSD"),
-    timeframe: str = Query(default="1m", example="1m"),
-    limit: int = Query(default=300, le=500)
+    symbol: str = Query(...),
+    timeframe: str = Query(default="1m"),
+    limit: int = Query(default=1000, le=1500)
 ):
     clean_sym = symbol.upper().replace("/", "").replace("-", "")
-    if timeframe not in TIMEFRAME_SECONDS:
-        raise HTTPException(status_code=400, detail=f"Invalid timeframe. Allowed: {list(TIMEFRAME_SECONDS.keys())}")
-    
     store = candle_manager.get_or_create_store(clean_sym)
-    candles = store.timeframe_candles.get(timeframe, [])
-    sliced = candles[-limit:] if len(candles) > limit else candles
-    return [c.to_dict() for c in sliced]
+    candles = store.get_candles(timeframe, limit=limit)
+    return [c.to_dict() for c in candles]
 
 @router.get("/indicators")
 async def get_indicators(
-    symbol: str = Query(..., example="EURUSD"),
-    timeframe: str = Query(default="1m", example="1m"),
-    ind_type: str = Query(default="ema", example="ema"),
+    symbol: str = Query(...),
+    timeframe: str = Query(default="1m"),
+    ind_type: str = Query(default="ema"),
     period: int = Query(default=20),
+    source: str = Query(default="close"),
+    std_dev: float = Query(default=2.0),
+    fast: int = Query(default=12),
+    slow: int = Query(default=26),
+    signal: int = Query(default=9),
+    k_period: int = Query(default=14),
+    d_period: int = Query(default=3),
+    smooth_k: int = Query(default=3),
     output: Optional[str] = Query(default=None)
 ):
     clean_sym = symbol.upper().replace("/", "").replace("-", "")
     store = candle_manager.get_or_create_store(clean_sym)
-    df = store.get_dataframe(timeframe)
+    df = store.get_dataframe(timeframe, limit=1200)
     if df.empty:
         return []
 
-    cfg: Dict[str, Any] = {"type": ind_type, "period": period}
+    cfg: Dict[str, Any] = {
+        "type": ind_type,
+        "period": period,
+        "source": source,
+        "std_dev": std_dev,
+        "fast": fast,
+        "slow": slow,
+        "signal": signal,
+        "k_period": k_period,
+        "d_period": d_period,
+        "smooth_k": smooth_k,
+    }
     if output:
         cfg["output"] = output
     

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
@@ -95,85 +95,114 @@
         </div>
     </header>
 
-    <!-- Sub-header: Chart Controls & Indicators -->
-    <div class="bg-slate-100 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 px-5 py-2 flex flex-wrap items-center justify-between gap-3 text-xs transition-colors">
-        <div class="flex items-center gap-4 flex-wrap">
-            <!-- Timeframe selector -->
+    <!-- TRADINGVIEW SUB-HEADER: TIMEFRAMES, INDICATORS & OHLCV READOUT -->
+    <div class="bg-slate-100 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800 px-4 py-1.5 flex flex-wrap items-center justify-between gap-3 text-xs transition-colors">
+        <div class="flex items-center gap-3 flex-wrap">
+            
+            <!-- Timeframe Selector with Presets & Custom Input -->
             <div class="flex items-center bg-white dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
-                <button class="tf-btn px-2.5 py-1 rounded-md font-semibold bg-sky-600 text-white" data-tf="1m">1m</button>
-                <button class="tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="5m">5m</button>
-                <button class="tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="15m">15m</button>
-                <button class="tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="1h">1h</button>
-                <button class="tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="4h">4h</button>
-                <button class="tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="1d">1D</button>
+                <button class="tf-btn px-2 py-0.5 rounded-md font-semibold bg-sky-600 text-white" data-tf="1m">1m</button>
+                <button class="tf-btn px-2 py-0.5 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="3m">3m</button>
+                <button class="tf-btn px-2 py-0.5 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="5m">5m</button>
+                <button class="tf-btn px-2 py-0.5 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="15m">15m</button>
+                <button class="tf-btn px-2 py-0.5 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="30m">30m</button>
+                <button class="tf-btn px-2 py-0.5 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="1h">1h</button>
+                <button class="tf-btn px-2 py-0.5 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="4h">4h</button>
+                <button class="tf-btn px-2 py-0.5 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="1d">1D</button>
+                <button class="tf-btn px-2 py-0.5 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="1w">1W</button>
+                <button id="open-custom-tf-btn" class="px-2 py-0.5 rounded-md font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950 flex items-center gap-1 border-l border-slate-200 dark:border-slate-800 ml-1 pl-2" title="Enter Custom Timeframe">
+                    <span>⏱️ Custom</span>
+                </button>
             </div>
 
-            <!-- Indicator Toggles -->
-            <div class="flex items-center gap-3 border-l border-slate-200 dark:border-slate-800 pl-4">
-                <span class="text-slate-500 dark:text-slate-400 font-medium">Overlays:</span>
-                <label class="flex items-center gap-1.5 cursor-pointer text-sky-600 dark:text-sky-400 font-medium">
-                    <input type="checkbox" class="indicator-toggle rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-sky-500" data-indicator="ema20">
-                    EMA 20
-                </label>
-                <label class="flex items-center gap-1.5 cursor-pointer text-amber-600 dark:text-amber-400 font-medium">
-                    <input type="checkbox" class="indicator-toggle rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-amber-500" data-indicator="ema50">
-                    EMA 50
-                </label>
-                <label class="flex items-center gap-1.5 cursor-pointer text-rose-600 dark:text-rose-400 font-medium">
-                    <input type="checkbox" class="indicator-toggle rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-rose-500" data-indicator="ema200">
-                    EMA 200
-                </label>
-                <label class="flex items-center gap-1.5 cursor-pointer text-indigo-600 dark:text-indigo-400 font-medium">
-                    <input type="checkbox" class="indicator-toggle rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-indigo-500" data-indicator="bb">
-                    Bollinger Bands
-                </label>
-            </div>
+            <!-- Indicators Modal Button -->
+            <button id="open-indicators-modal-btn" class="px-3 py-1 rounded-lg font-bold bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 transition-all active:scale-95">
+                <span class="font-mono text-xs font-black">fx</span> Indicators Library
+            </button>
         </div>
 
-        <!-- Quick Price Simulator Injection -->
-        <div class="flex items-center gap-2 bg-white dark:bg-slate-950 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
-            <span class="text-slate-500 dark:text-slate-400 text-[11px]">⚡ Test Price Cross:</span>
-            <input type="number" step="any" id="simulate-price-input" placeholder="e.g. 1.08550" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded px-2 py-0.5 text-xs w-28 focus:outline-none focus:border-sky-500 font-mono">
-            <button id="simulate-tick-btn" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold px-2 py-0.5 rounded text-[11px] transition-all">
-                Inject Tick
-            </button>
+        <!-- OHLCV Live Header Readout -->
+        <div id="ohlcv-readout" class="hidden md:flex items-center gap-3 text-[11px] font-mono text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-950 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
+            <span>O: <strong class="text-slate-900 dark:text-white" id="ohlcv-o">--</strong></span>
+            <span>H: <strong class="text-emerald-600 dark:text-emerald-400" id="ohlcv-h">--</strong></span>
+            <span>L: <strong class="text-rose-600 dark:text-rose-400" id="ohlcv-l">--</strong></span>
+            <span>C: <strong class="text-slate-900 dark:text-white" id="ohlcv-c">--</strong></span>
+            <span>Vol: <strong class="text-sky-600 dark:text-sky-400" id="ohlcv-vol">--</strong></span>
         </div>
     </div>
 
-    <!-- Main Content Layout -->
-    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 min-h-0">
+    <!-- MAIN TRADINGVIEW WORKSTATION LAYOUT -->
+    <main class="flex-1 flex overflow-hidden min-h-0">
         
-        <!-- Left: Interactive Chart (8 Cols) -->
-        <section class="lg:col-span-8 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-xl overflow-hidden min-h-[500px] transition-colors">
-            <div class="p-3 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <div class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    <span>📈 TradingView Interactive Candle Chart</span>
-                    <span class="text-[11px] text-slate-400 dark:text-slate-500">(Dashed lines represent active alert trigger levels)</span>
-                </div>
+        <!-- LEFT DRAWING TOOLS SIDEBAR (TradingView Style) -->
+        <aside class="w-12 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col items-center py-3 gap-2 shrink-0 z-30 transition-colors">
+            <button class="draw-tool-btn p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-sky-100 text-sm transition-all" data-tool="cursor" title="Crosshair / Select (Default)">
+                ➕
+            </button>
+            <button class="draw-tool-btn p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-sky-100 text-sm transition-all" data-tool="trendline" title="Trend Line (Click 2 points)">
+                📈
+            </button>
+            <button class="draw-tool-btn p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-sky-100 text-sm transition-all" data-tool="horizontal_ray" title="Horizontal Price Ray / Support & Resistance">
+                ➖
+            </button>
+            <button class="draw-tool-btn p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-sky-100 text-sm transition-all" data-tool="fibonacci" title="Fibonacci Retracement">
+                📊
+            </button>
+            <button class="draw-tool-btn p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-sky-100 text-sm transition-all" data-tool="measure" title="Measure Price Range & Delta">
+                📐
+            </button>
+            <div class="w-6 h-px bg-slate-200 dark:bg-slate-800 my-1"></div>
+            <button class="draw-tool-btn p-2 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-sm transition-all" data-tool="clear" title="Clear All Drawings">
+                🗑️
+            </button>
+        </aside>
+
+        <!-- CENTER: INTERACTIVE CHART & ON-CHART LEGEND -->
+        <section class="flex-1 flex flex-col relative bg-white dark:bg-slate-950 min-w-0">
+            
+            <!-- ON-CHART INDICATOR LEGEND CONTAINER (Top-Left overlay) -->
+            <div id="chart-indicators-legend" class="absolute top-3 left-4 z-20 flex flex-col gap-1.5 pointer-events-none *:pointer-events-auto max-w-sm">
+                <!-- Dynamic indicator pills rendered here -->
             </div>
-            <div class="flex-1 relative p-2" id="chart-container"></div>
+
+            <!-- Chart Canvas Container -->
+            <div class="flex-1 relative w-full h-full min-h-[480px]" id="chart-container"></div>
         </section>
 
-        <!-- Right: Instruments, Alerts & Logs (4 Cols) -->
-        <section class="lg:col-span-4 flex flex-col gap-4 min-h-0">
+        <!-- RIGHT: INSTRUMENTS, ALERTS & LOGS SIDEBAR -->
+        <aside class="w-80 lg:w-96 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col gap-3 p-3 overflow-y-auto shrink-0 transition-colors">
             
+            <!-- Quick Price Simulator Injection -->
+            <div class="bg-slate-50 dark:bg-slate-850 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+                <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 flex items-center justify-between">
+                    <span>⚡ Quick Price Trigger</span>
+                    <span class="text-[10px] text-sky-500 font-normal">Test Alert Cross</span>
+                </div>
+                <div class="flex gap-2">
+                    <input type="number" step="any" id="simulate-price-input" placeholder="e.g. 1.08550" class="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-2.5 py-1 text-xs font-mono">
+                    <button id="simulate-tick-btn" class="bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-1 rounded-lg text-xs transition-all">
+                        Inject
+                    </button>
+                </div>
+            </div>
+
             <!-- Instruments List -->
-            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm dark:shadow-lg transition-colors">
+            <div class="bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-800 p-2.5 shadow-sm">
                 <div class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 flex items-center justify-between">
-                    <span>Instruments (Live Rates)</span>
+                    <span>Instruments</span>
                     <span class="text-[10px] text-slate-400">Click to Chart</span>
                 </div>
-                <div class="grid grid-cols-3 gap-2" id="symbols-grid">
-                    <!-- Dynamic symbol cards -->
+                <div class="grid grid-cols-3 gap-1.5" id="symbols-grid">
+                    <!-- Dynamic symbol buttons -->
                 </div>
             </div>
 
             <!-- Active Alerts Panel -->
-            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 flex-1 flex flex-col min-h-[220px] shadow-sm dark:shadow-lg transition-colors">
+            <div class="bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-800 p-2.5 flex-1 flex flex-col min-h-[220px] shadow-sm">
                 <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800 mb-2">
-                    <div class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                         <span>Active Alert Rules</span>
-                        <span id="alerts-count-badge" class="px-2 py-0.5 rounded-full text-[10px] bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">0</span>
+                        <span id="alerts-count-badge" class="px-1.5 py-0.5 rounded-full text-[10px] bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 font-bold">0</span>
                     </div>
                 </div>
                 <div class="flex-1 overflow-y-auto space-y-2 pr-1 max-h-56" id="alerts-list">
@@ -181,21 +210,21 @@
                 </div>
             </div>
 
-            <!-- Real-time Triggered Log Feed -->
-            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 flex-1 flex flex-col min-h-[200px] shadow-sm dark:shadow-lg transition-colors">
+            <!-- Triggered History Logs -->
+            <div class="bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-800 p-2.5 flex-1 flex flex-col min-h-[180px] shadow-sm">
                 <div class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
                     <span class="flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
                         Triggered History
                     </span>
-                    <span class="text-[10px] text-slate-400">Live Feed</span>
+                    <span class="text-[10px] text-slate-400">Live</span>
                 </div>
-                <div class="flex-1 overflow-y-auto space-y-2 pr-1 max-h-48" id="trigger-logs-list">
+                <div class="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-44" id="trigger-logs-list">
                     <!-- Dynamic logs -->
                 </div>
             </div>
 
-        </section>
+        </aside>
 
     </main>
 
@@ -250,6 +279,160 @@
         </div>
     </div>
 
+    <!-- INDICATORS LIBRARY MODAL -->
+    <div id="indicators-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150 transition-colors">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-850">
+                <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
+                    <span class="font-mono text-indigo-500 font-bold">fx</span> Indicators & Strategies Library
+                </h3>
+                <button id="close-indicators-modal-btn" class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg">&times;</button>
+            </div>
+            
+            <div class="p-4 space-y-3 overflow-y-auto text-xs">
+                <input type="text" id="indicator-search-input" placeholder="Search indicators (e.g. EMA, RSI, Bollinger)..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs focus:ring-1 focus:ring-sky-500">
+
+                <div class="space-y-2" id="indicators-catalog-list">
+                    <div class="indicator-item p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-all" data-type="ema">
+                        <div>
+                            <div class="font-bold text-slate-800 dark:text-slate-200">Exponential Moving Average (EMA)</div>
+                            <div class="text-[11px] text-slate-500">Weighted average prioritizing recent prices</div>
+                        </div>
+                        <button class="add-ind-btn px-2.5 py-1 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white text-xs" data-type="ema">+ Add</button>
+                    </div>
+
+                    <div class="indicator-item p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-all" data-type="sma">
+                        <div>
+                            <div class="font-bold text-slate-800 dark:text-slate-200">Simple Moving Average (SMA)</div>
+                            <div class="text-[11px] text-slate-500">Arithmetic moving average of price over N periods</div>
+                        </div>
+                        <button class="add-ind-btn px-2.5 py-1 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white text-xs" data-type="sma">+ Add</button>
+                    </div>
+
+                    <div class="indicator-item p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-all" data-type="wma">
+                        <div>
+                            <div class="font-bold text-slate-800 dark:text-slate-200">Weighted Moving Average (WMA)</div>
+                            <div class="text-[11px] text-slate-500">Linear weighted moving average</div>
+                        </div>
+                        <button class="add-ind-btn px-2.5 py-1 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white text-xs" data-type="wma">+ Add</button>
+                    </div>
+
+                    <div class="indicator-item p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-all" data-type="rsi">
+                        <div>
+                            <div class="font-bold text-slate-800 dark:text-slate-200">Relative Strength Index (RSI)</div>
+                            <div class="text-[11px] text-slate-500">Momentum oscillator measuring overbought/oversold levels</div>
+                        </div>
+                        <button class="add-ind-btn px-2.5 py-1 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white text-xs" data-type="rsi">+ Add</button>
+                    </div>
+
+                    <div class="indicator-item p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-all" data-type="bollinger">
+                        <div>
+                            <div class="font-bold text-slate-800 dark:text-slate-200">Bollinger Bands (BB)</div>
+                            <div class="text-[11px] text-slate-500">Volatility envelope with upper, basis, and lower bands</div>
+                        </div>
+                        <button class="add-ind-btn px-2.5 py-1 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white text-xs" data-type="bollinger">+ Add</button>
+                    </div>
+
+                    <div class="indicator-item p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-all" data-type="macd">
+                        <div>
+                            <div class="font-bold text-slate-800 dark:text-slate-200">MACD (Moving Average Convergence Divergence)</div>
+                            <div class="text-[11px] text-slate-500">Trend-following momentum indicator</div>
+                        </div>
+                        <button class="add-ind-btn px-2.5 py-1 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white text-xs" data-type="macd">+ Add</button>
+                    </div>
+
+                    <div class="indicator-item p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-all" data-type="atr">
+                        <div>
+                            <div class="font-bold text-slate-800 dark:text-slate-200">Average True Range (ATR)</div>
+                            <div class="text-[11px] text-slate-500">Market volatility metric</div>
+                        </div>
+                        <button class="add-ind-btn px-2.5 py-1 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white text-xs" data-type="atr">+ Add</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INDICATOR SETTINGS MODAL -->
+    <div id="indicator-settings-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150 transition-colors">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-850">
+                <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm" id="ind-settings-title">
+                    <span>⚙️</span> Indicator Settings
+                </h3>
+                <button id="close-ind-settings-modal-btn" class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg">&times;</button>
+            </div>
+            
+            <form id="ind-settings-form" class="p-5 space-y-4 text-xs">
+                <input type="hidden" id="ind-settings-id">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Period / Length</label>
+                    <input type="number" id="ind-settings-period" min="1" max="500" value="20" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs font-mono">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Source</label>
+                    <select id="ind-settings-source" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs">
+                        <option value="close">Close</option>
+                        <option value="open">Open</option>
+                        <option value="high">High</option>
+                        <option value="low">Low</option>
+                        <option value="hl2">(High + Low) / 2</option>
+                        <option value="hlc3">(High + Low + Close) / 3</option>
+                    </select>
+                </div>
+
+                <div id="ind-settings-stddev-row" class="hidden">
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Standard Deviation (StdDev)</label>
+                    <input type="number" step="0.1" id="ind-settings-stddev" value="2.0" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs font-mono">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Line Color</label>
+                    <div class="flex items-center gap-2">
+                        <input type="color" id="ind-settings-color" value="#38bdf8" class="w-8 h-8 rounded border border-slate-300 dark:border-slate-700 cursor-pointer">
+                        <span class="text-slate-500 font-mono text-xs" id="ind-settings-color-val">#38bdf8</span>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" id="cancel-ind-settings-btn" class="px-3 py-1.5 rounded-lg font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-1.5 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white shadow">
+                        Apply Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CUSTOM TIMEFRAME MODAL -->
+    <div id="custom-tf-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150 transition-colors">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-850">
+                <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
+                    <span>⏱️</span> Custom Timeframe
+                </h3>
+                <button id="close-custom-tf-modal-btn" class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg">&times;</button>
+            </div>
+            
+            <form id="custom-tf-form" class="p-4 space-y-3 text-xs">
+                <div class="flex gap-2">
+                    <input type="number" id="custom-tf-number" min="1" max="120" value="7" class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs font-bold font-mono">
+                    <select id="custom-tf-unit" class="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs font-bold">
+                        <option value="m">Minutes</option>
+                        <option value="h">Hours</option>
+                        <option value="d">Days</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full py-2 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white text-xs shadow">
+                    Switch Timeframe
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Create Alert Modal -->
     <div id="alert-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150 transition-colors">
@@ -264,7 +447,7 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Instrument</label>
-                        <select id="modal-symbol" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs focus:ring-1 focus:ring-sky-500">
+                        <select id="modal-symbol" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs focus:ring-1 focus:ring-sky-500 font-bold">
                             <option value="EURUSD">EURUSD (EUR / USD)</option>
                             <option value="GBPUSD">GBPUSD (GBP / USD)</option>
                             <option value="USDJPY">USDJPY (USD / JPY)</option>
@@ -278,28 +461,32 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Timeframe</label>
-                        <select id="modal-timeframe" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs focus:ring-1 focus:ring-sky-500">
+                        <select id="modal-timeframe" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs focus:ring-1 focus:ring-sky-500 font-bold">
                             <option value="1m">1m</option>
+                            <option value="3m">3m</option>
                             <option value="5m">5m</option>
                             <option value="15m">15m</option>
+                            <option value="30m">30m</option>
                             <option value="1h">1h</option>
                             <option value="4h">4h</option>
                             <option value="1d">1D</option>
+                            <option value="1w">1W</option>
                         </select>
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Condition Type</label>
-                    <select id="modal-condition-type" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs focus:ring-1 focus:ring-sky-500">
-                        <option value="price_cross_up">Price Crossing Up (Target Level)</option>
-                        <option value="price_cross_down">Price Crossing Down (Target Level)</option>
-                        <option value="price_greater">Price Greater Than Or Equal</option>
-                        <option value="price_less">Price Less Than Or Equal</option>
+                    <select id="modal-condition-type" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs focus:ring-1 focus:ring-sky-500 font-semibold">
+                        <option value="price_cross_up">Crossing Above (Price > Level)</option>
+                        <option value="price_cross_down">Crossing Below (Price < Level)</option>
+                        <option value="price_greater">Greater Than (Price >= Level)</option>
+                        <option value="price_less">Less Than (Price <= Level)</option>
                         <option value="price_cross_indicator">Price Crosses Technical Indicator (EMA / SMA / BB)</option>
-                        <option value="indicator_cross_indicator">Indicator Crosses Indicator (e.g. 50 EMA crosses 200 EMA)</option>
+                        <option value="indicator_cross_indicator">Indicator Crosses Indicator (e.g. EMA 50 crosses EMA 200)</option>
                         <option value="indicator_cross_value">Indicator Crosses Value (e.g. RSI > 70 or < 30)</option>
-                        <option value="channel_exit">Channel Exit (Breaks above/below channel)</option>
+                        <option value="channel_exit">Exiting Price Channel</option>
+                        <option value="channel_enter">Entering Price Channel</option>
                     </select>
                 </div>
 
@@ -319,6 +506,15 @@
                         </select>
                     </div>
                     <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Alert Sound</label>
+                        <select id="modal-sound" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs">
+                            <option value="chime">🔔 Chime (Default)</option>
+                            <option value="radar">📡 Radar Ping</option>
+                            <option value="siren">🚨 Loud Siren</option>
+                            <option value="cash">💰 Cash Register</option>
+                        </select>
+                    </div>
+                </div>
                         <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Notification Channels</label>
                         <div class="space-y-1.5 text-xs text-slate-700 dark:text-slate-300 pt-1">
                             <label class="flex items-center gap-1.5 cursor-pointer">
