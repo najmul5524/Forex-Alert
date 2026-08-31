@@ -266,6 +266,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const titleEl = document.getElementById("current-symbol-title");
             if (titleEl) titleEl.innerText = `${currentObj.name} (${currentObj.symbol})`;
             const priceEl = document.getElementById("current-symbol-price");
+            if (priceEl) {
+                priceEl.innerText = currentObj.current_price.toFixed(currentObj.decimals);
+            }
+        },
+
         async changeSymbol(newSym) {
             this.symbol = newSym;
             this.renderSymbolsGrid();
