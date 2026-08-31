@@ -218,27 +218,47 @@ class CandleManager:
     def __init__(self):
         self.stores: Dict[str, SymbolCandleStore] = {}
 
-    def get_or_create_store(self, symbol: str) -> SymbolCandleStore:
+    def get_or_create_store(self, symbol: str, custom_base_price: Optional[float] = None) -> SymbolCandleStore:
         sym = symbol.upper().replace("/", "").replace("-", "")
         if sym not in self.stores:
             store = SymbolCandleStore(sym)
-            base_p = 1.0850
+            base_p = custom_base_price or 1.0850
             vol = 0.0004
-            if "USD" in sym and "JPY" in sym:
-                base_p = 154.50
-                vol = 0.06
+
+            price_map = {
+                "EURUSD": (1.1596, 0.0004),
+                "GBPUSD": (1.3545, 0.0005),
+                "USDJPY": (160.04, 0.06),
+                "AUDUSD": (0.7164, 0.0004),
+                "USDCAD": (1.3892, 0.0005),
+                "USDCHF": (0.8081, 0.0004),
+                "NZDUSD": (0.5980, 0.0004),
+                "EURGBP": (0.8380, 0.0003),
+                "EURJPY": (185.60, 0.08),
+                "GBPJPY": (216.80, 0.10),
+                "XAUUSD": (4432.0, 1.8),
+                "XAGUSD": (54.20, 0.08),
+                "USOIL": (78.50, 0.15),
+                "SPX500": (5650.0, 4.0),
+                "NAS100": (19800.0, 15.0),
+                "US30": (41500.0, 30.0),
+                "BTCUSDT": (78800.0, 50.0),
+                "ETHUSDT": (2650.0, 2.5),
+                "SOLUSDT": (145.0, 0.25),
+                "BNBUSDT": (540.0, 0.6),
+                "XRPUSDT": (0.585, 0.001)
+            }
+
+            if sym in price_map:
+                base_p, vol = price_map[sym]
             elif "XAU" in sym:
-                base_p = 2500.0
-                vol = 1.2
+                base_p, vol = 4432.0, 1.8
             elif "BTC" in sym:
-                base_p = 64500.0
-                vol = 35.0
-            elif "ETH" in sym:
-                base_p = 2650.0
-                vol = 2.5
-            elif "SOL" in sym:
-                base_p = 145.0
-                vol = 0.25
+                base_p, vol = 78800.0, 50.0
+
+            if custom_base_price is not None:
+                base_p = custom_base_price
+
             store.seed_initial_candles(base_p, vol)
             self.stores[sym] = store
         return self.stores[sym]
