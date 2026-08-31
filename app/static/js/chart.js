@@ -243,6 +243,22 @@ class TradingChart {
         }
     }
 
+    resetView() {
+        if (!this.chart) return;
+        try {
+            this.chart.timeScale().scrollToRealTime();
+            this.chart.timeScale().resetTimeScale();
+            this.chart.applyOptions({
+                rightPriceScale: {
+                    autoScale: true
+                }
+            });
+            this.redrawDrawings();
+        } catch (e) {
+            console.error("Error resetting chart view:", e);
+        }
+    }
+
     setTheme(isDark) {
         this.isDarkMode = isDark;
         if (!this.chart) return;

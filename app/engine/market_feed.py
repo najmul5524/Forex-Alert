@@ -139,7 +139,7 @@ class MarketFeedEngine:
                     ))
 
     async def _binance_stream_worker(self):
-        crypto_pairs = ["btcusdt", "ethusdt", "solusdt"]
+        crypto_pairs = ["btcusdt", "ethusdt", "solusdt", "bnbusdt", "xrpusdt"]
         stream_names = "/".join([f"{p}@ticker" for p in crypto_pairs])
         urls = [
             f"wss://stream.binance.com:9443/ws/{stream_names}",
@@ -171,21 +171,34 @@ class MarketFeedEngine:
 
     async def _forex_polling_worker(self):
         while self.is_running:
-            if settings.TWELVE_DATA_API_KEY:
-                try:
-                    symbols_param = "EUR/USD,GBP/USD,USD/JPY,XAU/USD,AUD/USD,USD/CAD"
-                    url = f"https://api.twelvedata.com/price?symbol={symbols_param}&apikey={settings.TWELVE_DATA_API_KEY}"
-                    async with httpx.AsyncClient(timeout=5) as client:
-                        resp = await client.get(url)
-                        if resp.status_code == 200:
-                            data = resp.json()
-                            for pair_key, val in data.items():
-                                if "price" in val:
-                                    clean_sym = pair_key.replace("/", "").upper()
-                                    await self.process_tick(clean_sym, float(val["price"]))
-                except Exception as e:
-                    logger.debug(f"TwelveData polling error: {e}")
-            await asyncio.sleep(4)
+            try:
+                # Fetch live real-world exchange rates from Open ER API
+                async with httpx.AsyncClient(timeout=8) as client:
+                    resp = await client.get("https://open.er-api.com/v6/latest/USD")
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        rates = data.get("rates", {})
+                        
+                        fx_map = {
+                            "EURUSD": round(1.0 / rates.get("EUR", 0.92), 5) if rates.get("EUR") else None,
+                            "GBPUSD": round(1.0 / rates.get("GBP", 0.77), 5) if rates.get("GBP") else None,
+                            "USDJPY": round(rates.get("JPY", 154.5), 3) if rates.get("JPY") else None,
+                            "AUDUSD": round(1.0 / rates.get("AUD", 1.52), 5) if rates.get("AUD") else None,
+                            "USDCAD": round(rates.get("CAD", 1.37), 5) if rates.get("CAD") else None,
+                            "USDCHF": round(rates.get("CHF", 0.89), 5) if rates.get("CHF") else None,
+                            "NZDUSD": round(1.0 / rates.get("NZD", 1.67), 5) if rates.get("NZD") else None,
+                            "EURGBP": round(rates.get("GBP", 1) / rates.get("EUR", 1), 5) if rates.get("EUR") and rates.get("GBP") else None,
+                            "EURJPY": round(rates.get("JPY", 1) / rates.get("EUR", 1), 3) if rates.get("EUR") and rates.get("JPY") else None,
+                            "GBPJPY": round(rates.get("JPY", 1) / rates.get("GBP", 1), 3) if rates.get("GBP") and rates.get("JPY") else None,
+                        }
+
+                        for sym, p in fx_map.items():
+                            if p is not None:
+                                await self.process_tick(sym, p)
+            except Exception as e:
+                logger.debug(f"Live Forex polling error: {e}")
+
+            await asyncio.sleep(8)
 
     async def _simulation_worker(self):
         for s in SUPPORTED_SYMBOLS:

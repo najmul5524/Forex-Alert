@@ -100,8 +100,11 @@ document.addEventListener("DOMContentLoaded", () => {
                                 <option value="1w" ${paneTf === '1w' ? 'selected' : ''}>1W</option>
                             </select>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-1.5">
                             <span class="pane-countdown text-[11px] font-mono font-bold text-amber-500 dark:text-amber-400">⏱️ --</span>
+                            <button class="pane-reset-btn text-slate-400 hover:text-sky-500 dark:hover:text-sky-400 p-0.5 text-xs" title="Reset chart & scroll to current candle">
+                                ⏭️
+                            </button>
                             <button class="pane-focus-btn text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5 text-xs" title="Focus this chart pane">
                                 ⛶
                             </button>
@@ -156,6 +159,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     await paneObj.chart.loadCandles(paneObj.symbol, paneObj.timeframe);
                     this.updateCandleCountdown();
                 });
+
+                const resetBtn = paneWrapper.querySelector(".pane-reset-btn");
+                if (resetBtn) {
+                    resetBtn.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        paneObj.chart.resetView();
+                    });
+                }
 
                 const focusBtn = paneWrapper.querySelector(".pane-focus-btn");
                 focusBtn.addEventListener("click", (e) => {
@@ -773,6 +784,17 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (p.chart) p.chart.setTimezone(offset);
                     }
                     showToastNotification("Timezone", `Timezone updated to ${tzSelect.options[tzSelect.selectedIndex].text}`, "info");
+                });
+            }
+
+            // TradingView Reset / Scroll to Realtime Button
+            const chartResetBtn = document.getElementById("chart-reset-btn");
+            if (chartResetBtn) {
+                chartResetBtn.addEventListener("click", () => {
+                    for (const p of this.panes) {
+                        if (p.chart) p.chart.resetView();
+                    }
+                    showToastNotification("Chart Reset", "Scrolled to current candle & auto-fit price scale", "info");
                 });
             }
 

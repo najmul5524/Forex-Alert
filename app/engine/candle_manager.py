@@ -56,7 +56,7 @@ class Candle:
         }
 
 class SymbolCandleStore:
-    def __init__(self, symbol: str, max_bars: int = 10000):
+    def __init__(self, symbol: str, max_bars: int = 120000):
         self.symbol = symbol
         self.max_bars = max_bars
         self.timeframe_candles: Dict[str, List[Candle]] = {
@@ -68,44 +68,44 @@ class SymbolCandleStore:
     def seed_initial_candles(self, base_price: float = 1.0850, volatility: float = 0.0004):
         now = int(time.time())
 
-        # Timeframe-specific historical depth
+        # Timeframe-specific historical depth (At least 1 Year for 1h to 15m)
         tf_depths = {
-            "1w": (300, 604800, volatility * 5.0),   # 300 weeks (~6 years)
-            "1d": (1000, 86400, volatility * 3.0),   # 1000 days (~3 years)
-            "4h": (2000, 14400, volatility * 1.8),   # 2000 4h bars (~1 year)
-            "2h": (2000, 7200, volatility * 1.4),    # 2000 2h bars
-            "1h": (3000, 3600, volatility * 1.2),    # 3000 1h bars (~4 months)
-            "45m": (2000, 2700, volatility * 1.1),
-            "30m": (3000, 1800, volatility * 1.0),
-            "15m": (3000, 900, volatility * 0.8),
-            "5m": (3000, 300, volatility * 0.6),
-            "3m": (3000, 180, volatility * 0.5),
-            "1m": (3000, 60, volatility * 0.4),      # 3000 1m bars (~50 hours)
+            "1w": (320, 604800, volatility * 5.0),    # 320 weeks (~6.1 years)
+            "1d": (1200, 86400, volatility * 3.0),    # 1200 days (~3.3 years)
+            "4h": (3000, 14400, volatility * 1.8),    # 3000 4h bars (~1.37 years)
+            "2h": (5000, 7200, volatility * 1.4),     # 5000 2h bars (~1.14 years)
+            "1h": (10000, 3600, volatility * 1.2),    # 10000 1h bars (~1.14 years / 416 days)
+            "45m": (12000, 2700, volatility * 1.1),   # 12000 45m bars (~1.02 years)
+            "30m": (18000, 1800, volatility * 1.0),   # 18000 30m bars (~1.03 years / 375 days)
+            "15m": (36000, 900, volatility * 0.8),    # 36000 15m bars (~1.03 years / 375 days)
+            "5m": (60000, 300, volatility * 0.6),     # 60000 5m bars (~208 days)
+            "3m": (40000, 180, volatility * 0.5),     # 40000 3m bars (~83 days)
+            "1m": (50000, 60, volatility * 0.4),      # 50000 1m bars (~34.7 days)
         }
 
         for tf, (num_bars, sec, tf_vol) in tf_depths.items():
             start_time = (now // sec) * sec - (num_bars * sec)
-            curr_p = base_price * (1.0 + (random.uniform(-0.04, 0.04)))
+            curr_p = base_price * (1.0 + (random.uniform(-0.03, 0.03)))
             candles_list: List[Candle] = []
 
-            cycle_len = max(20, num_bars // 15)
+            cycle_len = max(30, num_bars // 20)
             trend = random.choice([-1.0, 1.0])
 
             for i in range(num_bars):
                 bar_time = start_time + (i * sec)
                 if i % cycle_len == 0:
-                    trend = random.choice([-1.0, 1.0]) * random.uniform(0.6, 1.4)
+                    trend = random.choice([-1.0, 1.0]) * random.uniform(0.7, 1.3)
 
                 # Mean reversion back towards base_price near the end
                 progress = i / float(num_bars)
-                mean_pull = (base_price - curr_p) * 0.02 * (progress ** 2)
+                mean_pull = (base_price - curr_p) * 0.015 * (progress ** 2)
 
                 drift = (trend * tf_vol * 0.2) + mean_pull + ((random.random() - 0.495) * tf_vol)
                 open_p = curr_p
                 close_p = open_p + drift
 
-                wick_up = abs(random.random() * tf_vol * 0.8)
-                wick_down = abs(random.random() * tf_vol * 0.8)
+                wick_up = abs(random.random() * tf_vol * 0.7)
+                wick_down = abs(random.random() * tf_vol * 0.7)
                 high_p = max(open_p, close_p) + wick_up
                 low_p = min(open_p, close_p) - wick_down
                 vol = random.uniform(20.0, 500.0)
