@@ -100,25 +100,12 @@ class TradingChart {
                     borderColor: isDark ? '#334155' : '#cbd5e1',
                     scaleMargins: {
                         top: 0.08,
-                        bottom: 0.18,
+                        bottom: 0.08,
                     },
                 },
             });
 
             this.createMainSeries(this.chartType);
-
-            // Volume histogram
-            this.volumeSeries = this.chart.addHistogramSeries({
-                color: isDark ? '#38bdf8' : '#0284c7',
-                priceFormat: {
-                    type: 'volume',
-                },
-                priceScaleId: '',
-                scaleMargins: {
-                    top: 0.84,
-                    bottom: 0,
-                },
-            });
 
             // Setup crosshair move for OHLCV tracking with timezone formatting
             this.chart.subscribeCrosshairMove((param) => {
@@ -127,7 +114,6 @@ class TradingChart {
                     return;
                 }
                 const candle = param.seriesPrices.get(this.candleSeries);
-                const volume = param.seriesPrices.get(this.volumeSeries);
                 if (candle && this.onCrosshairMoveCallback) {
                     this.onCrosshairMoveCallback({
                         time: param.time,
@@ -135,7 +121,7 @@ class TradingChart {
                         high: candle.high !== undefined ? candle.high : candle.value,
                         low: candle.low !== undefined ? candle.low : candle.value,
                         close: candle.close !== undefined ? candle.close : candle.value,
-                        volume: volume || 0
+                        volume: 0
                     });
                 }
             });
@@ -670,6 +656,15 @@ class TradingChart {
         this.container.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         this.container.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         this.container.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+
+        // Keyboard Delete listener
+        window.addEventListener('keydown', (e) => {
+            if ((e.key === 'Delete' || e.key === 'Backspace') && this.selectedDrawingId) {
+                // Do not delete if typing in an input
+                if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+                this.removeDrawing(this.selectedDrawingId);
+            }
+        });
     }
 
     resizeDrawingCanvas() {
@@ -682,42 +677,183 @@ class TradingChart {
 
     setDrawingTool(tool) {
         this.activeTool = tool;
+        this.selectedDrawingId = null;
+        this.hideDrawingToolbar();
         if (tool === 'cursor') {
-            this.container.style.cursor = 'crosshair';
+            this.container.style.cursor = 'default';
         } else if (tool === 'clear') {
             this.drawings = [];
             this.redrawDrawings();
             this.activeTool = 'cursor';
+            this.container.style.cursor = 'default';
         } else {
             this.container.style.cursor = 'crosshair';
         }
     }
 
+    removeDrawing(id) {
+        this.drawings = this.drawings.filter(d => d.id !== id);
+        if (this.selectedDrawingId === id) {
+            this.selectedDrawingId = null;
+            this.hideDrawingToolbar();
+        }
+        this.redrawDrawings();
+    }
+
+    updateDrawing(id, updates) {
+        const d = this.drawings.find(dr => dr.id === id);
+        if (d) {
+            Object.assign(d, updates);
+            this.redrawDrawings();
+        }
+    }
+
+    showDrawingToolbar(drawing, clientX, clientY) {
+        let tb = this.container.querySelector('.floating-drawing-toolbar');
+        if (!tb) {
+            tb = document.createElement('div');
+            tb.className = 'floating-drawing-toolbar absolute z-30 flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg px-2 py-1 select-none text-xs';
+            this.container.appendChild(tb);
+        }
+
+        const colors = ['#38bdf8', '#10b981', '#f43f5e', '#f59e0b', '#a855f7', '#ffffff'];
+        const colorBtns = colors.map(c => 
+            `<button class="w-3.5 h-3.5 rounded-full border border-slate-300 dark:border-slate-600 transition-transform active:scale-90" style="background-color: ${c}" data-color="${c}" title="Change Color"></button>`
+        ).join('');
+
+        tb.innerHTML = `
+            <div class="flex items-center gap-1 mr-1">
+                ${colorBtns}
+            </div>
+            <div class="h-3 w-px bg-slate-200 dark:bg-slate-700"></div>
+            <select class="draw-width-select bg-transparent text-[11px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer">
+                <option value="1" ${drawing.lineWidth === 1 ? 'selected' : ''}>1px</option>
+                <option value="2" ${drawing.lineWidth === 2 || !drawing.lineWidth ? 'selected' : ''}>2px</option>
+                <option value="3" ${drawing.lineWidth === 3 ? 'selected' : ''}>3px</option>
+                <option value="4" ${drawing.lineWidth === 4 ? 'selected' : ''}>4px</option>
+            </select>
+            <div class="h-3 w-px bg-slate-200 dark:bg-slate-700"></div>
+            <button class="draw-delete-btn text-rose-500 hover:text-rose-600 font-bold px-1.5 py-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors" title="Delete Drawing (Del)">
+                ✕
+            </button>
+        `;
+
+        tb.querySelectorAll('[data-color]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.updateDrawing(drawing.id, { color: btn.dataset.color });
+            });
+        });
+
+        const widthSelect = tb.querySelector('.draw-width-select');
+        if (widthSelect) {
+            widthSelect.addEventListener('change', (e) => {
+                e.stopPropagation();
+                this.updateDrawing(drawing.id, { lineWidth: parseInt(e.target.value) });
+            });
+        }
+
+        const delBtn = tb.querySelector('.draw-delete-btn');
+        if (delBtn) {
+            delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.removeDrawing(drawing.id);
+            });
+        }
+
+        const rect = this.container.getBoundingClientRect();
+        const top = Math.max(10, (clientY - rect.top) - 45);
+        const left = Math.max(10, Math.min(rect.width - 240, (clientX - rect.left) - 100));
+
+        tb.style.top = `${top}px`;
+        tb.style.left = `${left}px`;
+        tb.style.display = 'flex';
+    }
+
+    hideDrawingToolbar() {
+        const tb = this.container.querySelector('.floating-drawing-toolbar');
+        if (tb) tb.style.display = 'none';
+    }
+
     handleMouseDown(e) {
-        if (this.activeTool === 'cursor' || !this.overlayCtx) return;
+        if (!this.overlayCtx) return;
 
         const rect = this.container.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
+        if (this.activeTool === 'cursor') {
+            // Hit test drawings for selection / editing / deletion
+            let hit = null;
+            for (let i = this.drawings.length - 1; i >= 0; i--) {
+                const d = this.drawings[i];
+                if (d.type === 'horizontal_ray') {
+                    if (Math.abs(y - d.y) <= 8) { hit = d; break; }
+                } else if (d.type === 'trendline') {
+                    const A = x - d.startX;
+                    const B = y - d.startY;
+                    const C = d.endX - d.startX;
+                    const D = d.endY - d.startY;
+                    const dot = A * C + B * D;
+                    const len_sq = C * C + D * D;
+                    let param = -1;
+                    if (len_sq !== 0) param = dot / len_sq;
+                    let xx, yy;
+                    if (param < 0) { xx = d.startX; yy = d.startY; }
+                    else if (param > 1) { xx = d.endX; yy = d.endY; }
+                    else { xx = d.startX + param * C; yy = d.startY + param * D; }
+                    const dist = Math.hypot(x - xx, y - yy);
+                    if (dist <= 8) { hit = d; break; }
+                } else if (d.type in { fibonacci: 1, measure: 1 }) {
+                    const minX = Math.min(d.startX, d.endX);
+                    const maxX = Math.max(d.startX, d.endX);
+                    const minY = Math.min(d.startY, d.endY);
+                    const maxY = Math.max(d.startY, d.endY);
+                    if (x >= minX - 6 && x <= maxX + 6 && y >= minY - 6 && y <= maxY + 6) {
+                        hit = d; break;
+                    }
+                }
+            }
+
+            if (hit) {
+                this.selectedDrawingId = hit.id;
+                this.showDrawingToolbar(hit, e.clientX, e.clientY);
+                this.redrawDrawings();
+            } else {
+                this.selectedDrawingId = null;
+                this.hideDrawingToolbar();
+                this.redrawDrawings();
+            }
+            return;
+        }
+
         if (this.activeTool === 'horizontal_ray') {
             const price = this.candleSeries.coordinateToPrice(y);
-            this.drawings.push({
+            const id = `dr_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+            const newDr = {
+                id: id,
                 type: 'horizontal_ray',
                 y: y,
                 price: price,
-                color: '#f59e0b'
-            });
+                color: '#f59e0b',
+                lineWidth: 2
+            };
+            this.drawings.push(newDr);
+            this.selectedDrawingId = id;
+            this.showDrawingToolbar(newDr, e.clientX, e.clientY);
             this.redrawDrawings();
             this.activeTool = 'cursor';
+            this.container.style.cursor = 'default';
         } else if (this.activeTool in { trendline: 1, fibonacci: 1, measure: 1 }) {
             this.currentDrawing = {
+                id: `dr_${Date.now()}_${Math.floor(Math.random()*1000)}`,
                 type: this.activeTool,
                 startX: x,
                 startY: y,
                 endX: x,
                 endY: y,
-                color: '#38bdf8'
+                color: '#38bdf8',
+                lineWidth: 2
             };
         }
     }
@@ -734,9 +870,12 @@ class TradingChart {
     handleMouseUp(e) {
         if (this.currentDrawing) {
             this.drawings.push(this.currentDrawing);
+            this.selectedDrawingId = this.currentDrawing.id;
+            this.showDrawingToolbar(this.currentDrawing, e.clientX, e.clientY);
             this.currentDrawing = null;
             this.redrawDrawings();
             this.activeTool = 'cursor';
+            this.container.style.cursor = 'default';
         }
     }
 
@@ -750,11 +889,14 @@ class TradingChart {
         if (this.currentDrawing) all.push(this.currentDrawing);
 
         for (const d of all) {
+            const isSelected = d.id === this.selectedDrawingId;
+            const lWidth = d.lineWidth || 2;
+
             if (d.type === 'horizontal_ray') {
                 ctx.save();
                 ctx.strokeStyle = d.color || '#f59e0b';
-                ctx.lineWidth = 1.5;
-                ctx.setLineDash([4, 4]);
+                ctx.lineWidth = isSelected ? lWidth + 1.5 : lWidth;
+                ctx.setLineDash(isSelected ? [] : [4, 4]);
                 ctx.beginPath();
                 ctx.moveTo(0, d.y);
                 ctx.lineTo(this.overlayCanvas.width, d.y);
@@ -762,26 +904,35 @@ class TradingChart {
 
                 // Price label tag
                 if (d.price) {
-                    ctx.fillStyle = '#f59e0b';
-                    ctx.fillRect(this.overlayCanvas.width - 70, d.y - 10, 65, 20);
+                    ctx.fillStyle = d.color || '#f59e0b';
+                    ctx.fillRect(this.overlayCanvas.width - 75, d.y - 10, 70, 20);
                     ctx.fillStyle = '#000000';
                     ctx.font = 'bold 10px monospace';
-                    ctx.fillText(d.price.toFixed(4), this.overlayCanvas.width - 65, d.y + 4);
+                    ctx.fillText(d.price.toFixed(2), this.overlayCanvas.width - 70, d.y + 4);
+                }
+
+                if (isSelected) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.strokeStyle = d.color || '#f59e0b';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(40, d.y, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
                 }
                 ctx.restore();
             } else if (d.type === 'trendline') {
                 ctx.save();
                 ctx.strokeStyle = d.color || '#38bdf8';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = isSelected ? lWidth + 1.5 : lWidth;
                 ctx.beginPath();
                 ctx.moveTo(d.startX, d.startY);
                 ctx.lineTo(d.endX, d.endY);
                 ctx.stroke();
 
                 // Endpoint handles
-                ctx.fillStyle = '#38bdf8';
-                ctx.beginPath(); ctx.arc(d.startX, d.startY, 4, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(d.endX, d.endY, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = isSelected ? '#ffffff' : (d.color || '#38bdf8');
+                ctx.strokeStyle = d.color || '#38bdf8';
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(d.startX, d.startY, isSelected ? 5 : 3.5, 0, Math.PI * 2); ctx.fill(); if (isSelected) ctx.stroke();
+                ctx.beginPath(); ctx.arc(d.endX, d.endY, isSelected ? 5 : 3.5, 0, Math.PI * 2); ctx.fill(); if (isSelected) ctx.stroke();
                 ctx.restore();
             } else if (d.type === 'fibonacci') {
                 ctx.save();
@@ -792,7 +943,7 @@ class TradingChart {
                 fibLevels.forEach((level, idx) => {
                     const y = d.startY + (dy * level);
                     ctx.strokeStyle = colors[idx % colors.length];
-                    ctx.lineWidth = 1;
+                    ctx.lineWidth = isSelected ? 1.5 : 1;
                     ctx.beginPath();
                     ctx.moveTo(Math.min(d.startX, d.endX), y);
                     ctx.lineTo(this.overlayCanvas.width, y);
@@ -811,14 +962,14 @@ class TradingChart {
                 const maxY = Math.max(d.startY, d.endY);
 
                 ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
-                ctx.strokeStyle = '#38bdf8';
-                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = d.color || '#38bdf8';
+                ctx.lineWidth = isSelected ? 2 : 1.5;
                 ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
                 ctx.fillRect(minX, minY, maxX - minX, maxY - minY);
 
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 11px sans-serif';
-                ctx.fillText(`Δ Price Range`, minX + 8, minY + 18);
+                ctx.fillText(`Δ Range`, minX + 8, minY + 18);
                 ctx.restore();
             }
         }

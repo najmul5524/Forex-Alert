@@ -30,14 +30,14 @@ SUPPORTED_SYMBOLS = [
     {"symbol": "GBPJPY", "name": "GBP / JPY", "type": "forex", "base_price": 200.10, "decimals": 3, "spread_pips": 2.2},
 
     # Metals & Energy
-    {"symbol": "XAUUSD", "name": "Gold / USD", "type": "metals", "base_price": 2500.0, "decimals": 2, "spread_pips": 2.5},
-    {"symbol": "XAGUSD", "name": "Silver / USD", "type": "metals", "base_price": 29.50, "decimals": 3, "spread_pips": 1.8},
-    {"symbol": "USOIL", "name": "Crude Oil WTI", "type": "energy", "base_price": 74.20, "decimals": 2, "spread_pips": 3.0},
+    {"symbol": "XAUUSD", "name": "Gold / USD", "type": "metals", "base_price": 4432.0, "decimals": 2, "spread_pips": 2.5},
+    {"symbol": "XAGUSD", "name": "Silver / USD", "type": "metals", "base_price": 54.20, "decimals": 3, "spread_pips": 1.8},
+    {"symbol": "USOIL", "name": "Crude Oil WTI", "type": "energy", "base_price": 78.50, "decimals": 2, "spread_pips": 3.0},
 
     # Indices
-    {"symbol": "SPX500", "name": "S&P 500 Index", "type": "indices", "base_price": 5600.0, "decimals": 2, "spread_pips": 4.0},
-    {"symbol": "NAS100", "name": "Nasdaq 100 Index", "type": "indices", "base_price": 19500.0, "decimals": 2, "spread_pips": 5.0},
-    {"symbol": "US30", "name": "Dow Jones 30", "type": "indices", "base_price": 41200.0, "decimals": 2, "spread_pips": 6.0},
+    {"symbol": "SPX500", "name": "S&P 500 Index", "type": "indices", "base_price": 5650.0, "decimals": 2, "spread_pips": 4.0},
+    {"symbol": "NAS100", "name": "Nasdaq 100 Index", "type": "indices", "base_price": 19800.0, "decimals": 2, "spread_pips": 5.0},
+    {"symbol": "US30", "name": "Dow Jones 30", "type": "indices", "base_price": 41500.0, "decimals": 2, "spread_pips": 6.0},
 
     # Crypto Assets
     {"symbol": "BTCUSDT", "name": "Bitcoin / USDT", "type": "crypto", "base_price": 64500.0, "decimals": 2, "spread_pips": 1.0},
