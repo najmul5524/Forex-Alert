@@ -33,25 +33,27 @@ class _LogsScreenState extends State<LogsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF080D1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
-        elevation: 0,
-        title: const Text(
+        title: Text(
           'Trigger History',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.white),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 17,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Color(0xFF38BDF8)),
+            icon: Icon(Icons.refresh, color: Theme.of(context).colorScheme.primary),
             onPressed: _fetchLogs,
           ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _fetchLogs,
-        color: const Color(0xFF38BDF8),
-        backgroundColor: const Color(0xFF131D31),
+        color: Theme.of(context).colorScheme.primary,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         child: _isLoading && _logs.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : _logs.isEmpty
@@ -63,9 +65,9 @@ class _LogsScreenState extends State<LogsScreen> {
                         children: [
                           const Text('📋', style: TextStyle(fontSize: 48)),
                           const SizedBox(height: 16),
-                          const Text(
+                          Text(
                             'No triggered alerts yet',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                           const SizedBox(height: 6),
                           Text(

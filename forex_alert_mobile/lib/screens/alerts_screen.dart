@@ -45,9 +45,9 @@ class _AlertsScreenState extends State<AlertsScreen> {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF131D31),
-          title: const Text('Delete Alert?', style: TextStyle(color: Colors.white)),
-          content: Text('Are you sure you want to delete the alert for ${alert.symbol}?', style: TextStyle(color: Colors.blueGrey.shade300)),
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text('Delete Alert?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+          content: Text('Are you sure you want to delete the alert for ${alert.symbol}?', style: TextStyle(color: Colors.blueGrey.shade400)),
           actions: [
             TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
             TextButton(
@@ -97,47 +97,49 @@ class _AlertsScreenState extends State<AlertsScreen> {
     final activeCount = _alerts.where((a) => a.isActive).length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF080D1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
-        elevation: 0,
         title: Row(
           children: [
-            const Text(
+            Text(
               'Alert Rules',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.white),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xFF0EA5E9).withValues(alpha: 0.2),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 '$activeCount Active',
-                style: const TextStyle(color: Color(0xFF38BDF8), fontSize: 11, fontWeight: FontWeight.bold),
+                style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.bold),
               ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Color(0xFF38BDF8)),
+            icon: Icon(Icons.refresh, color: Theme.of(context).colorScheme.primary),
             onPressed: _fetchAlerts,
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openCreateModal,
-        backgroundColor: const Color(0xFF0EA5E9),
+        backgroundColor: Theme.of(context).colorScheme.primary,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('New Alert', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
       ),
       body: RefreshIndicator(
         onRefresh: _fetchAlerts,
-        color: const Color(0xFF38BDF8),
-        backgroundColor: const Color(0xFF131D31),
+        color: Theme.of(context).colorScheme.primary,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         child: _isLoading && _alerts.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : _alerts.isEmpty
@@ -149,9 +151,9 @@ class _AlertsScreenState extends State<AlertsScreen> {
                         children: [
                           const Text('🔔', style: TextStyle(fontSize: 48)),
                           const SizedBox(height: 16),
-                          const Text(
+                          Text(
                             'No alerts configured yet',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                           const SizedBox(height: 6),
                           Text(

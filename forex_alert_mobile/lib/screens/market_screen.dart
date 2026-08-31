@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../models/symbol_rate.dart';
 import '../services/api_service.dart';
+import '../services/theme_manager.dart';
 import '../widgets/price_card.dart';
 import 'create_alert_screen.dart';
 
@@ -65,7 +66,7 @@ class _MarketScreenState extends State<MarketScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(success ? 'Injected $price for $_simSelectedSymbol!' : 'Failed to reach server'),
-          backgroundColor: success ? const Color(0xFF0EA5E9) : const Color(0xFFF43F5E),
+          backgroundColor: success ? Theme.of(context).colorScheme.primary : const Color(0xFFF43F5E),
         ),
       );
       _fetchRates();
@@ -74,39 +75,48 @@ class _MarketScreenState extends State<MarketScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF080D1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
-        elevation: 0,
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: const Color(0xFF0EA5E9).withValues(alpha: 0.2),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text('⚡', style: TextStyle(fontSize: 16)),
             ),
             const SizedBox(width: 10),
-            const Text(
+            Text(
               'Live Market Watch',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.white),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Color(0xFF38BDF8)),
+            icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
+            tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+            onPressed: () => ThemeManager.toggleTheme(context),
+          ),
+          IconButton(
+            icon: Icon(Icons.refresh, color: Theme.of(context).colorScheme.primary),
             onPressed: _fetchRates,
           ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _fetchRates,
-        color: const Color(0xFF38BDF8),
-        backgroundColor: const Color(0xFF131D31),
+        color: Theme.of(context).colorScheme.primary,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -114,16 +124,23 @@ class _MarketScreenState extends State<MarketScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFF131D31),
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF1E293B)),
+                border: Border.all(color: Theme.of(context).dividerColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  )
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.flash_on, color: Colors.amberAccent, size: 16),
+                      Icon(Icons.flash_on, color: isDark ? Colors.amberAccent : Colors.amber.shade700, size: 16),
                       const SizedBox(width: 6),
                       Text(
                         'TEST PRICE CROSS TRIGGER',
@@ -131,7 +148,7 @@ class _MarketScreenState extends State<MarketScreen> {
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,
-                          color: Colors.blueGrey.shade300,
+                          color: isDark ? Colors.blueGrey.shade300 : Colors.blueGrey.shade700,
                         ),
                       ),
                     ],
@@ -142,15 +159,19 @@ class _MarketScreenState extends State<MarketScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0F172A),
+                          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFF334155)),
+                          border: Border.all(color: Theme.of(context).dividerColor),
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             value: _simSelectedSymbol,
-                            dropdownColor: const Color(0xFF0F172A),
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                            dropdownColor: Theme.of(context).colorScheme.surface,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
                             items: _rates.map((r) => DropdownMenuItem(value: r.symbol, child: Text(r.symbol))).toList(),
                             onChanged: (v) => setState(() => _simSelectedSymbol = v!),
                           ),
@@ -161,14 +182,28 @@ class _MarketScreenState extends State<MarketScreen> {
                         child: TextField(
                           controller: _simPriceController,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontSize: 13),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontFamily: 'monospace',
+                            fontSize: 13,
+                          ),
                           decoration: InputDecoration(
                             hintText: 'e.g. 1.08600',
-                            hintStyle: TextStyle(color: Colors.blueGrey.shade600, fontSize: 12),
+                            hintStyle: TextStyle(
+                              color: isDark ? Colors.blueGrey.shade600 : Colors.blueGrey.shade400,
+                              fontSize: 12,
+                            ),
                             filled: true,
-                            fillColor: const Color(0xFF0F172A),
+                            fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                            ),
                           ),
                         ),
                       ),
@@ -176,7 +211,7 @@ class _MarketScreenState extends State<MarketScreen> {
                       ElevatedButton(
                         onPressed: _injectSimulatedPrice,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0EA5E9),
+                          backgroundColor: Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -196,7 +231,7 @@ class _MarketScreenState extends State<MarketScreen> {
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.5,
-                color: Colors.blueGrey.shade400,
+                color: isDark ? Colors.blueGrey.shade400 : Colors.blueGrey.shade600,
               ),
             ),
             const SizedBox(height: 10),

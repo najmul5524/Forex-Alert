@@ -9,6 +9,7 @@ class PriceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isForex = rate.type.toLowerCase() == 'forex';
     final isCrypto = rate.type.toLowerCase() == 'crypto';
     final badgeColor = isCrypto ? Colors.amber.shade700 : isForex ? const Color(0xFF0EA5E9) : Colors.indigo.shade600;
@@ -19,12 +20,12 @@ class PriceCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFF131D31),
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF1E293B)),
+          border: Border.all(color: Theme.of(context).dividerColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
+              color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.04),
               blurRadius: 6,
               offset: const Offset(0, 3),
             )
@@ -35,9 +36,9 @@ class PriceCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: badgeColor.withValues(alpha: 0.15),
+                color: badgeColor.withValues(alpha: isDark ? 0.15 : 0.12),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: badgeColor.withValues(alpha: 0.4)),
+                border: Border.all(color: badgeColor.withValues(alpha: isDark ? 0.4 : 0.3)),
               ),
               child: Text(
                 isCrypto ? '🪙' : isForex ? '💱' : '⚡',
@@ -51,10 +52,10 @@ class PriceCard extends StatelessWidget {
                 children: [
                   Text(
                     rate.symbol,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -63,7 +64,7 @@ class PriceCard extends StatelessWidget {
                     rate.name,
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.blueGrey.shade400,
+                      color: isDark ? Colors.blueGrey.shade400 : Colors.blueGrey.shade600,
                     ),
                   ),
                 ],
@@ -74,24 +75,24 @@ class PriceCard extends StatelessWidget {
               children: [
                 Text(
                   rate.currentPrice.toStringAsFixed(rate.decimals),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'monospace',
                     fontWeight: FontWeight.w800,
                     fontSize: 16,
-                    color: Color(0xFF38BDF8),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                    color: const Color(0xFF10B981).withValues(alpha: isDark ? 0.15 : 0.12),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Text(
                     '● LIVE',
                     style: TextStyle(
-                      color: Color(0xFF34D399),
+                      color: Color(0xFF10B981),
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
                     ),

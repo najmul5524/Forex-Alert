@@ -1,608 +1,572 @@
-﻿document.addEventListener(DOMContentLoaded, () => {
+﻿document.addEventListener("DOMContentLoaded", () => {
     const App = {
-        symbol: EURUSD,
-        timeframe: 1m,
+        symbol: "EURUSD",
+        timeframe: "1m",
         chart: null,
         symbols: [],
         alerts: [],
         logs: [],
         ws: null,
-        vapidPublicKey: window.VAPID_PUBLIC_KEY || ",
+        vapidPublicKey: window.VAPID_PUBLIC_KEY || "",
 
- async init() {
- this.chart = new TradingChart(chart-container);
- await this.loadSymbols();
- await this.loadAlerts();
- await this.loadLogs();
- await this.chart.loadSymbolData(this.symbol, this.timeframe);
- this.chart.setAlertLines(this.alerts);
+        async init() {
+            this.initTheme();
+            this.chart = new TradingChart("chart-container");
+            await this.loadSymbols();
+            await this.loadAlerts();
+            await this.loadLogs();
+            await this.chart.loadCandles(this.symbol, this.timeframe);
+            this.chart.setAlertPriceLines(this.alerts);
 
- this.initWebSocket();
- this.setupEventListeners();
- this.setupConditionFormWatcher();
- },
+            this.initWebSocket();
+            this.setupEventListeners();
+            this.setupConditionFormWatcher();
+        },
 
- async loadSymbols() {
- try {
- const resp = await fetch(/api/market/symbols);
- this.symbols = await resp.json();
- this.renderSymbolsSelector();
- } catch (e) {
- console.error(Failed to load symbols:, e);
- }
- },
+        initTheme() {
+            const savedTheme = localStorage.getItem("app_theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+            this.setTheme(savedTheme === "dark");
+        },
 
- renderSymbolsSelector() {
- const container = document.getElementById(symbol-list);
- if (!container) return;
+        setTheme(isDark) {
+            const icon = document.getElementById("theme-toggle-icon");
+            if (isDark) {
+                document.documentElement.classList.add("dark");
+                localStorage.setItem("app_theme", "dark");
+                if (icon) icon.textContent = "☀️";
+            } else {
+                document.documentElement.classList.remove("dark");
+                localStorage.setItem("app_theme", "light");
+                if (icon) icon.textContent = "🌙";
+            }
+            if (this.chart) {
+                this.chart.setTheme(isDark);
+            }
+        },
 
- container.innerHTML = this.symbols.map(s => 
- <button class=symbol-btn px-3 py-2 rounded-lg flex items-center justify-between transition-all  data-symbol=>
- <div class=text-left>
- <div class=font-semibold text-xs tracking-wider></div>
- <div class=text-[10px] opacity-75></div>
- </div>
- <div class=text-right>
- <div class=font-mono text-xs font-bold id=price-card-></div>
- </div>
- </button>
- ).join();
+        async loadSymbols() {
+            try {
+                const resp = await fetch("/api/market/symbols");
+                this.symbols = await resp.json();
+                this.renderSymbolsGrid();
+            } catch (e) {
+                console.error("Failed to load symbols:", e);
+            }
+        },
 
- container.querySelectorAll(.symbol-btn).forEach(btn => {
- btn.addEventListener(click, () => {
- this.changeSymbol(btn.dataset.symbol);
- });
- });
+        renderSymbolsGrid() {
+            const container = document.getElementById("symbols-grid");
+            if (!container) return;
 
- this.updateHeaderPrice();
- },
+            container.innerHTML = this.symbols.map(s => {
+                const isActive = s.symbol === this.symbol;
+                return `
+                <button class="symbol-btn p-2 rounded-xl border text-left transition-all ${
+                    isActive 
+                        ? 'bg-sky-50 dark:bg-sky-950/80 border-sky-500 text-sky-600 dark:text-sky-400 shadow-sm' 
+                        : 'bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200'
+                }" data-symbol="${s.symbol}">
+                    <div class="font-bold text-xs leading-tight">${s.symbol}</div>
+                    <div class="text-[10px] text-slate-500 dark:text-slate-400 truncate">${s.name}</div>
+                    <div class="font-mono font-bold text-xs mt-1 text-sky-600 dark:text-sky-400" id="rate-${s.symbol}">
+                        ${s.current_price.toFixed(s.decimals)}
+                    </div>
+                </button>
+                `;
+            }).join("");
 
- updateHeaderPrice() {
- const currentObj = this.symbols.find(s => s.symbol === this.symbol);
- if (!currentObj) return;
+            container.querySelectorAll(".symbol-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    this.changeSymbol(btn.dataset.symbol);
+                });
+            });
 
- document.getElementById(current-symbol-title).innerText = currentObj.name + ();
- const priceEl = document.getElementById(current-symbol-price);
- if (priceEl) {
- priceEl.innerText = currentObj.current_price.toFixed(currentObj.decimals);
- }
- },
+            this.updateHeaderPrice();
+        },
 
- async changeSymbol(newSym) {
- if (this.symbol === newSym) return;
- this.symbol = newSym;
- this.renderSymbolsSelector();
- await this.chart.loadSymbolData(this.symbol, this.timeframe);
- this.chart.setAlertLines(this.alerts);
- },
+        updateHeaderPrice() {
+            const currentObj = this.symbols.find(s => s.symbol === this.symbol);
+            if (!currentObj) return;
 
- async changeTimeframe(newTf) {
- if (this.timeframe === newTf) return;
- this.timeframe = newTf;
- document.querySelectorAll(.tf-btn).forEach(b => {
- if (b.dataset.tf === newTf) {
- b.classList.add(bg-sky-600, text-white);
- b.classList.remove(text-slate-400, hover:bg-slate-800);
- } else {
- b.classList.remove(bg-sky-600, text-white);
- b.classList.add(text-slate-400, hover:bg-slate-800);
- }
- });
- await this.chart.loadSymbolData(this.symbol, this.timeframe);
- },
+            const titleEl = document.getElementById("current-symbol-title");
+            if (titleEl) titleEl.innerText = `${currentObj.name} (${currentObj.symbol})`;
+            const priceEl = document.getElementById("current-symbol-price");
+            if (priceEl) {
+                priceEl.innerText = currentObj.current_price.toFixed(currentObj.decimals);
+            }
+        },
 
- async loadAlerts() {
- try {
- const resp = await fetch(/api/alerts);
- this.alerts = await resp.json();
- this.renderAlerts();
- if (this.chart) {
- this.chart.setAlertLines(this.alerts);
- }
- } catch (e) {
- console.error(Failed to load alerts:, e);
- }
- },
+        async changeSymbol(newSym) {
+            if (this.symbol === newSym) return;
+            this.symbol = newSym;
+            this.renderSymbolsGrid();
+            await this.chart.loadCandles(this.symbol, this.timeframe);
+            this.chart.setAlertPriceLines(this.alerts);
+        },
 
- renderAlerts() {
- const container = document.getElementById(alerts-list-container);
- const badgeCount = document.getElementById(active-alerts-count);
- if (badgeCount) {
- const activeCount = this.alerts.filter(a => a.is_active).length;
- badgeCount.innerText = activeCount;
- }
+        async changeTimeframe(newTf) {
+            if (this.timeframe === newTf) return;
+            this.timeframe = newTf;
+            document.querySelectorAll(".tf-btn").forEach(b => {
+                if (b.dataset.tf === newTf) {
+                    b.classList.add("bg-sky-600", "text-white");
+                    b.classList.remove("text-slate-600", "dark:text-slate-400", "hover:bg-slate-100", "dark:hover:bg-slate-800");
+                } else {
+                    b.classList.remove("bg-sky-600", "text-white");
+                    b.classList.add("text-slate-600", "dark:text-slate-400", "hover:bg-slate-100", "dark:hover:bg-slate-800");
+                }
+            });
+            await this.chart.loadCandles(this.symbol, this.timeframe);
+        },
 
- if (!container) return;
+        async loadAlerts() {
+            try {
+                const resp = await fetch("/api/alerts");
+                this.alerts = await resp.json();
+                this.renderAlerts();
+                if (this.chart) {
+                    this.chart.setAlertPriceLines(this.alerts);
+                }
+            } catch (e) {
+                console.error("Failed to load alerts:", e);
+            }
+        },
 
- if (this.alerts.length === 0) {
- container.innerHTML = 
- <div class=p-8 text-center text-slate-500>
- <div class=text-3xl mb-2>🔔</div>
- <div class=font-medium text-sm>No alerts configured yet</div>
- <div class=text-xs mt-1>Click Create Alert to set price or indicator triggers.</div>
- </div>
- ;
- return;
- }
+        renderAlerts() {
+            const container = document.getElementById("alerts-list");
+            const badgeCount = document.getElementById("alerts-count-badge");
+            if (badgeCount) {
+                const activeCount = this.alerts.filter(a => a.is_active).length;
+                badgeCount.innerText = activeCount;
+            }
 
- container.innerHTML = this.alerts.map(a => {
- let conditionText = a.condition_type.replace(/_/g, ' ').toUpperCase();
- let detailText = ;
- if (a.params.target_price) {
- detailText = Target: <span class=font-mono text-sky-400 font-semibold></span>;
- } else if (a.params.threshold) {
- detailText = Threshold: <span class=font-mono text-sky-400 font-semibold></span>;
- } else if (a.condition_type === price_cross_indicator) {
- detailText = Ind: <span class=font-mono text-sky-400 font-semibold> ()</span>;
- } else if (a.condition_type === indicator_cross_indicator) {
- detailText = Cross: <span class=font-mono text-sky-400 font-semibold> / </span>;
- }
+            if (!container) return;
 
- const channelBadges = (a.channels || []).map(ch => {
- const icons = { push: '📱 Push', email: '✉️ Email', webhook: '🔗 Hook', in_app: '🔊 App' };
- return <span class=px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700></span>;
- }).join(' ');
+            if (this.alerts.length === 0) {
+                container.innerHTML = `
+                    <div class="p-6 text-center text-slate-400 dark:text-slate-500">
+                        <div class="text-2xl mb-1">🔔</div>
+                        <div class="font-semibold text-xs text-slate-600 dark:text-slate-400">No alerts configured yet</div>
+                        <div class="text-[11px] mt-0.5">Click Create Alert to set price or indicator triggers.</div>
+                    </div>
+                `;
+                return;
+            }
 
- return 
- <div class=p-3 bg-slate-850 hover:bg-slate-800/80 rounded-xl border  transition-all flex flex-col gap-2>
- <div class=flex items-center justify-between>
- <div class=flex items-center gap-2>
- <span class=font-bold text-sm text-slate-100></span>
- <span class=px-2 py-0.5 rounded text-[10px] font-semibold bg-sky-950 text-sky-400 border border-sky-800/60></span>
- <span class=text-[11px] font-medium text-amber-400></span>
- </div>
- <div class=flex items-center gap-2>
- <button class=toggle-alert-btn p-1 rounded-md text-xs font-semibold  data-id=>
- 
- </button>
- <button class=test-alert-btn p-1 px-2 rounded-md text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 title=Test Fire Alert data-id=>
- ⚡ Test
- </button>
- <button class=delete-alert-btn p-1 px-2 rounded-md text-xs bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-900/80 title=Delete Alert data-id=>
- ✕
- </button>
- </div>
- </div>
- <div class=flex items-center justify-between text-xs text-slate-400>
- <div></div>
- <div class=text-[11px]>Frequency: <span class=text-slate-300 font-medium></span></div>
- </div>
- <div class=flex items-center justify-between pt-1 border-t border-slate-800/80 text-[11px] text-slate-400>
- <div class=flex gap-1.5 flex-wrap></div>
- <div>Triggers: <span class=font-mono font-semibold text-slate-200></span></div>
- </div>
- </div>
- ;
- }).join();
+            container.innerHTML = this.alerts.map(a => {
+                let conditionText = a.condition_type.replace(/_/g, " ").toUpperCase();
+                let detailText = "";
+                if (a.params.target_price) {
+                    detailText = `Target: <span class="font-mono text-sky-600 dark:text-sky-400 font-bold">${a.params.target_price}</span>`;
+                } else if (a.params.threshold) {
+                    detailText = `Threshold: <span class="font-mono text-sky-600 dark:text-sky-400 font-bold">${a.params.threshold}</span>`;
+                } else if (a.condition_type === "price_cross_indicator") {
+                    detailText = `Ind: <span class="font-mono text-sky-600 dark:text-sky-400 font-bold">${a.params.indicator?.type?.toUpperCase()} (${a.params.indicator?.period})</span>`;
+                }
 
- // Wire buttons
- container.querySelectorAll(.toggle-alert-btn).forEach(btn => {
- btn.addEventListener(click, async () => {
- const id = btn.dataset.id;
- await fetch(/api/alerts//toggle, { method: POST });
- await this.loadAlerts();
- });
- });
+                return `
+                <div class="p-3 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-800 transition-all flex flex-col gap-1.5 text-xs">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-900 dark:text-slate-100">${a.symbol}</span>
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-400 border border-sky-200 dark:border-sky-800/60">${a.timeframe}</span>
+                            <span class="text-[11px] font-semibold text-amber-600 dark:text-amber-400">${conditionText}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button class="toggle-alert-btn px-2 py-0.5 rounded text-[10px] font-bold ${a.is_active ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}" data-id="${a.id}">
+                                ${a.is_active ? "Active" : "Paused"}
+                            </button>
+                            <button class="test-alert-btn px-1.5 py-0.5 rounded text-[10px] bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700" title="Test Fire Alert" data-id="${a.id}">
+                                ⚡
+                            </button>
+                            <button class="delete-alert-btn px-1.5 py-0.5 rounded text-[10px] bg-rose-100 dark:bg-rose-950/60 hover:bg-rose-200 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-900/80" title="Delete Alert" data-id="${a.id}">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between text-slate-600 dark:text-slate-400 text-[11px]">
+                        <div>${detailText}</div>
+                        <div>Fired: <span class="font-mono font-bold text-slate-800 dark:text-slate-200">${a.trigger_count}x</span></div>
+                    </div>
+                </div>
+                `;
+            }).join("");
 
- container.querySelectorAll(.test-alert-btn).forEach(btn => {
- btn.addEventListener(click, async () => {
- const id = btn.dataset.id;
- const resp = await fetch(/api/alerts//test-trigger, { method: POST });
- if (resp.ok) {
- showToastNotification(Test Dispatched, Test alert payload broadcasted across all configured channels., success);
- }
- });
- });
+            // Wire action buttons
+            container.querySelectorAll(".toggle-alert-btn").forEach(btn => {
+                btn.addEventListener("click", async () => {
+                    const id = btn.dataset.id;
+                    await fetch(`/api/alerts/${id}/toggle`, { method: "POST" });
+                    await this.loadAlerts();
+                });
+            });
 
- container.querySelectorAll(.delete-alert-btn).forEach(btn => {
- btn.addEventListener(click, async () => {
- const id = btn.dataset.id;
- if (confirm(Delete this alert?)) {
- await fetch(/api/alerts/, { method: DELETE });
- await this.loadAlerts();
- }
- });
- });
- },
+            container.querySelectorAll(".test-alert-btn").forEach(btn => {
+                btn.addEventListener("click", async () => {
+                    const id = btn.dataset.id;
+                    const resp = await fetch(`/api/alerts/${id}/test-trigger`, { method: "POST" });
+                    if (resp.ok) {
+                        showToastNotification("Test Dispatched", "Test alert broadcasted across channels.", "success");
+                    }
+                });
+            });
 
- async loadLogs() {
- try {
- const resp = await fetch(/api/alerts/history/logs);
- this.logs = await resp.json();
- this.renderLogs();
- } catch (e) {
- console.error(Failed to load logs:, e);
- }
- },
+            container.querySelectorAll(".delete-alert-btn").forEach(btn => {
+                btn.addEventListener("click", async () => {
+                    const id = btn.dataset.id;
+                    if (confirm("Delete this alert?")) {
+                        await fetch(`/api/alerts/${id}`, { method: "DELETE" });
+                        await this.loadAlerts();
+                    }
+                });
+            });
+        },
 
- renderLogs() {
- const container = document.getElementById(trigger-logs-container);
- if (!container) return;
+        async loadLogs() {
+            try {
+                const resp = await fetch("/api/alerts/history/logs");
+                this.logs = await resp.json();
+                this.renderLogs();
+            } catch (e) {
+                console.error("Failed to load logs:", e);
+            }
+        },
 
- if (this.logs.length === 0) {
- container.innerHTML = 
- <div class=p-6 text-center text-slate-500 text-xs>No alert trigger logs recorded yet.</div>
- ;
- return;
- }
+        renderLogs() {
+            const container = document.getElementById("trigger-logs-list");
+            if (!container) return;
 
- container.innerHTML = this.logs.map(log => 
- <div class=p-2.5 bg-slate-900/60 rounded-lg border border-slate-800 flex items-center justify-between text-xs>
- <div class=flex items-center gap-2>
- <span class=text-rose-400 font-bold>🚨</span>
- <div>
- <div class=font-semibold text-slate-200> <span class=text-slate-400 font-normal>()</span></div>
- <div class=text-[11px] text-slate-400></div>
- </div>
- </div>
- <div class=text-right>
- <div class=font-mono font-bold text-sky-400></div>
- <div class=text-[10px] text-slate-500></div>
- </div>
- </div>
- ).join();
- },
+            if (this.logs.length === 0) {
+                container.innerHTML = `
+                    <div class="p-6 text-center text-slate-400 dark:text-slate-500 text-xs">No alert trigger logs recorded yet.</div>
+                `;
+                return;
+            }
 
- initWebSocket() {
- const protocol = window.location.protocol === https: ? wss: : ws:;
- const wsUrl = ${protocol}///ws;
- this.ws = new WebSocket(wsUrl);
+            container.innerHTML = this.logs.map(log => `
+                <div class="p-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs transition-colors">
+                    <div class="flex items-center gap-2">
+                        <span class="text-rose-500 font-bold">🚨</span>
+                        <div>
+                            <div class="font-bold text-slate-900 dark:text-slate-200">${log.symbol} <span class="text-slate-500 font-normal">(${log.timeframe})</span></div>
+                            <div class="text-[11px] text-slate-600 dark:text-slate-400">${log.condition_summary}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-mono font-bold text-sky-600 dark:text-sky-400">${log.trigger_price}</div>
+                        <div class="text-[10px] text-slate-400 dark:text-slate-500">${new Date(log.timestamp).toLocaleTimeString()}</div>
+                    </div>
+                </div>
+            `).join("");
+        },
 
- this.ws.onopen = () => {
- const statusDot = document.getElementById(ws-status-dot);
- const statusText = document.getElementById(ws-status-text);
- if (statusDot) statusDot.className = w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse;
- if (statusText) statusText.innerText = Live Market Connected;
- };
+        initWebSocket() {
+            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            this.ws = new WebSocket(wsUrl);
 
- this.ws.onclose = () => {
- const statusDot = document.getElementById(ws-status-dot);
- const statusText = document.getElementById(ws-status-text);
- if (statusDot) statusDot.className = w-2.5 h-2.5 rounded-full bg-rose-500;
- if (statusText) statusText.innerText = Reconnecting...;
- setTimeout(() => this.initWebSocket(), 3000);
- };
+            this.ws.onopen = () => {
+                const dot = document.getElementById("ws-status-dot");
+                const text = document.getElementById("ws-status-text");
+                if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                if (text) text.innerText = "Live Stream Connected";
+            };
 
- this.ws.onmessage = (event) => {
- try {
- const msg = JSON.parse(event.data);
- if (msg.type === tick) {
- const tick = msg.data;
- // Update symbol price in symbols list
- const sObj = this.symbols.find(s => s.symbol === tick.symbol);
- if (sObj) {
- sObj.current_price = tick.price;
- const cardPrice = document.getElementById(price-card-);
- if (cardPrice) {
- cardPrice.innerText = tick.price.toFixed(sObj.decimals);
- }
- }
+            this.ws.onclose = () => {
+                const dot = document.getElementById("ws-status-dot");
+                const text = document.getElementById("ws-status-text");
+                if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500";
+                if (text) text.innerText = "Reconnecting...";
+                setTimeout(() => this.initWebSocket(), 3000);
+            };
 
- // If tick is for currently selected symbol, update chart & header
- if (tick.symbol === this.symbol) {
- const headerPrice = document.getElementById(current-symbol-price);
- if (headerPrice && sObj) {
- headerPrice.innerText = tick.price.toFixed(sObj.decimals);
- }
- if (tick.candle_1m && this.chart) {
- this.chart.updateTick(tick.candle_1m);
- }
- }
- } else if (msg.type === alert_triggered) {
- const alertData = msg.data;
- playAlertChime();
- showToastNotification(
- 🚨 Alert: (),
- ${alertData.summary} at ,
- alert
- );
- this.loadAlerts();
- this.loadLogs();
- }
- } catch (e) {
- console.error(WS message parse error:, e);
- }
- };
- },
+            this.ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === "tick") {
+                        const tick = msg.data;
+                        const cardPrice = document.getElementById(`rate-${tick.symbol}`);
+                        if (cardPrice) {
+                            cardPrice.innerText = tick.price.toFixed(cardPrice.innerText.includes(".") ? cardPrice.innerText.split(".")[1].length : 2);
+                        }
 
- setupEventListeners() {
- // Timeframe buttons
- document.querySelectorAll(.tf-btn).forEach(btn => {
- btn.addEventListener(click, () => this.changeTimeframe(btn.dataset.tf));
- });
+                        if (tick.symbol === this.symbol) {
+                            const curPriceEl = document.getElementById("current-symbol-price");
+                            if (curPriceEl) curPriceEl.innerText = tick.price.toFixed(curPriceEl.innerText.includes(".") ? curPriceEl.innerText.split(".")[1].length : 2);
+                            this.chart.updateTick(tick.symbol, tick);
+                        }
+                    } else if (msg.type === "alert_triggered") {
+                        showToastNotification("🚨 Alert Triggered", msg.data.summary, "warning");
+                        this.loadAlerts();
+                        this.loadLogs();
+                    }
+                } catch (e) {
+                    console.error("WS parse error:", e);
+                }
+            };
+        },
 
- // Indicator checkboxes
- document.querySelectorAll(.indicator-toggle).forEach(chk => {
- chk.addEventListener(change, () => {
- this.chart.toggleIndicator(chk.dataset.indicator, chk.checked);
- });
- });
+        setupEventListeners() {
+            // Theme toggle button
+            const themeBtn = document.getElementById("theme-toggle-btn");
+            if (themeBtn) {
+                themeBtn.addEventListener("click", () => {
+                    const isDark = document.documentElement.classList.contains("dark");
+                    this.setTheme(!isDark);
+                });
+            }
 
- // Push Notification enable button
- const pushBtn = document.getElementById(enable-push-btn);
- if (pushBtn) {
- pushBtn.addEventListener(click, async () => {
- pushBtn.disabled = true;
- pushBtn.innerText = Enabling...;
- const res = await registerPushNotifications(this.vapidPublicKey);
- if (res.success) {
- pushBtn.className = px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800;
- pushBtn.innerText = ✓ Push Enabled;
- showToastNotification(Push Notifications Active, You will receive background alerts on this browser., success);
- } else {
- pushBtn.disabled = false;
- pushBtn.innerText = Enable Push Alerts;
- showToastNotification(Push Error, res.message, warning);
- }
- });
- }
+            // Timeframe selector buttons
+            document.querySelectorAll(".tf-btn").forEach(btn => {
+                btn.addEventListener("click", () => this.changeTimeframe(btn.dataset.tf));
+            });
 
- // Quick Tick Simulation Injector
- const injectBtn = document.getElementById(simulate-tick-btn);
- if (injectBtn) {
- injectBtn.addEventListener(click, async () => {
- const priceInput = document.getElementById(simulate-price-input);
- const priceVal = parseFloat(priceInput.value);
- if (!priceVal) return;
+            // Indicator checkboxes
+            document.querySelectorAll(".indicator-toggle").forEach(chk => {
+                chk.addEventListener("change", () => {
+                    this.chart.toggleIndicator(chk.dataset.indicator, chk.checked);
+                });
+            });
 
- await fetch(/api/market/tick-override, {
- method: POST,
- headers: { Content-Type: application/json },
- body: JSON.stringify({ symbol: this.symbol, price: priceVal })
- });
- showToastNotification(Injected Price, Simulated price pushed for , info);
- });
- }
+            // Push Notification enable button
+            const pushBtn = document.getElementById("enable-push-btn");
+            if (pushBtn) {
+                pushBtn.addEventListener("click", async () => {
+                    pushBtn.disabled = true;
+                    pushBtn.innerText = "Enabling...";
+                    const res = await registerPushNotifications(this.vapidPublicKey);
+                    if (res.success) {
+                        pushBtn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800";
+                        pushBtn.innerText = "✓ Push Enabled";
+                        showToastNotification("Push Notifications Active", "You will receive background alerts on this browser.", "success");
+                    } else {
+                        pushBtn.disabled = false;
+                        pushBtn.innerText = "📱 Enable Push Alerts";
+                        showToastNotification("Push Notice", res.message, "warning");
+                    }
+                });
+            }
 
- // Create Alert Modal Open/Close
- const openModalBtn = document.getElementById(open-alert-modal-btn);
- const closeModalBtn = document.getElementById(close-alert-modal-btn);
- const modal = document.getElementById(alert-modal);
- if (openModalBtn && modal) {
- openModalBtn.addEventListener(click, () => {
- document.getElementById(modal-alert-symbol).value = this.symbol;
- document.getElementById(modal-alert-timeframe).value = this.timeframe;
- const sObj = this.symbols.find(s => s.symbol === this.symbol);
- if (sObj) {
- document.getElementById(modal-target-price).value = sObj.current_price.toFixed(sObj.decimals);
- }
- modal.classList.remove(hidden);
- });
- }
- if (closeModalBtn && modal) {
- closeModalBtn.addEventListener(click, () => modal.classList.add(hidden));
- }
+            // Quick Tick Simulation Injector
+            const injectBtn = document.getElementById("simulate-tick-btn");
+            if (injectBtn) {
+                injectBtn.addEventListener("click", async () => {
+                    const priceInput = document.getElementById("simulate-price-input");
+                    const priceVal = parseFloat(priceInput.value);
+                    if (!priceVal) return;
 
- // Create Alert Form Submit
- const alertForm = document.getElementById(create-alert-form);
- if (alertForm) {
- alertForm.addEventListener(submit, async (e) => {
- e.preventDefault();
- await this.handleCreateAlertSubmit();
- });
- }
+                    await fetch("/api/market/tick-override", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ symbol: this.symbol, price: priceVal })
+                    });
+                    showToastNotification("Injected Price", `Simulated price ${priceVal} pushed for ${this.symbol}`, "info");
+                });
+            }
 
- // Settings Modal Open/Close
- const openSettingsBtn = document.getElementById(open-settings-btn);
- const closeSettingsBtn = document.getElementById(close-settings-btn);
- const settingsModal = document.getElementById(settings-modal);
- if (openSettingsBtn && settingsModal) {
- openSettingsBtn.addEventListener(click, async () => {
- await this.loadSettingsIntoModal();
- settingsModal.classList.remove(hidden);
- });
- }
- if (closeSettingsBtn && settingsModal) {
- closeSettingsBtn.addEventListener(click, () => settingsModal.classList.add(hidden));
- }
+            // Create Alert Modal
+            const openModalBtn = document.getElementById("open-alert-modal-btn");
+            const closeModalBtn = document.getElementById("close-alert-modal-btn");
+            const cancelModalBtn = document.getElementById("cancel-alert-modal-btn");
+            const modal = document.getElementById("alert-modal");
+            
+            if (openModalBtn && modal) {
+                openModalBtn.addEventListener("click", () => {
+                    document.getElementById("modal-symbol").value = this.symbol;
+                    document.getElementById("modal-timeframe").value = this.timeframe;
+                    modal.classList.remove("hidden");
+                });
+            }
+            if (closeModalBtn && modal) {
+                closeModalBtn.addEventListener("click", () => modal.classList.add("hidden"));
+            }
+            if (cancelModalBtn && modal) {
+                cancelModalBtn.addEventListener("click", () => modal.classList.add("hidden"));
+            }
 
- // Settings Form Submit
- const settingsForm = document.getElementById(settings-form);
- if (settingsForm) {
- settingsForm.addEventListener(submit, async (e) => {
- e.preventDefault();
- await this.handleSettingsSubmit();
- });
- }
+            // Create Alert Form Submit
+            const alertForm = document.getElementById("create-alert-form");
+            if (alertForm) {
+                alertForm.addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    await this.handleCreateAlertSubmit();
+                });
+            }
 
- // Test Push Button in Settings
- const testPushBtn = document.getElementById(settings-test-push-btn);
- if (testPushBtn) {
- testPushBtn.addEventListener(click, async () => {
- const resp = await fetch(/api/notifications/test-push, { method: POST });
- const res = await resp.json();
- if (resp.ok) {
- showToastNotification(Push Test Dispatched, Sent to registered browser(s)., success);
- } else {
- showToastNotification(Push Test Failed, res.detail || Error, warning);
- }
- });
- }
+            // Channel Email toggle
+            const emailChk = document.getElementById("modal-channel-email");
+            const emailRow = document.getElementById("modal-email-row");
+            if (emailChk && emailRow) {
+                emailChk.addEventListener("change", () => {
+                    if (emailChk.checked) emailRow.classList.remove("hidden");
+                    else emailRow.classList.add("hidden");
+                });
+            }
 
- // Test Email Button in Settings
- const testEmailBtn = document.getElementById(settings-test-email-btn);
- if (testEmailBtn) {
- testEmailBtn.addEventListener(click, async () => {
- const emailInput = document.getElementById(settings-test-email-target).value;
- if (!emailInput) {
- alert(Please enter recipient email in test box);
- return;
- }
- const resp = await fetch(/api/notifications/test-email, {
- method: POST,
- headers: { Content-Type: application/json },
- body: JSON.stringify({ email: emailInput })
- });
- const res = await resp.json();
- if (resp.ok) {
- showToastNotification(Email Test Sent, Check your inbox at , success);
- } else {
- showToastNotification(Email Test Failed, res.detail || Check SMTP settings, warning);
- }
- });
- }
- },
+            // Settings Modal
+            const openSettingsBtn = document.getElementById("open-settings-btn");
+            const closeSettingsBtn = document.getElementById("close-settings-modal-btn");
+            const settingsModal = document.getElementById("settings-modal");
+            if (openSettingsBtn && settingsModal) {
+                openSettingsBtn.addEventListener("click", () => settingsModal.classList.remove("hidden"));
+            }
+            if (closeSettingsBtn && settingsModal) {
+                closeSettingsBtn.addEventListener("click", () => settingsModal.classList.add("hidden"));
+            }
 
- setupConditionFormWatcher() {
- const condSelect = document.getElementById(modal-condition-type);
- if (!condSelect) return;
+            // Test Push in Settings
+            const testPushBtn = document.getElementById("send-test-push-btn");
+            if (testPushBtn) {
+                testPushBtn.addEventListener("click", async () => {
+                    const resp = await fetch("/api/notifications/test-push", { method: "POST" });
+                    const res = await resp.json();
+                    if (resp.ok) {
+                        showToastNotification("Push Test Dispatched", "Sent test notification to registered browsers/devices.", "success");
+                    } else {
+                        showToastNotification("Push Test", res.detail || "Dispatched", "warning");
+                    }
+                });
+            }
 
- condSelect.addEventListener(change, () => {
- const val = condSelect.value;
- const priceGroup = document.getElementById(group-target-price);
- const indCrossIndGroup = document.getElementById(group-ind-cross-ind);
- const indValGroup = document.getElementById(group-ind-value);
- const channelGroup = document.getElementById(group-channel);
+            // Save Settings
+            const saveSettingsBtn = document.getElementById("save-settings-btn");
+            if (saveSettingsBtn && settingsModal) {
+                saveSettingsBtn.addEventListener("click", () => {
+                    settingsModal.classList.add("hidden");
+                    showToastNotification("Settings Saved", "Settings updated successfully.", "success");
+                });
+            }
+        },
 
- // Hide all dynamic groups first
- priceGroup.classList.add(hidden);
- indCrossIndGroup.classList.add(hidden);
- indValGroup.classList.add(hidden);
- channelGroup.classList.add(hidden);
+        setupConditionFormWatcher() {
+            const condSelect = document.getElementById("modal-condition-type");
+            const container = document.getElementById("dynamic-params-container");
+            if (!condSelect || !container) return;
 
- if ([price_cross_up, price_cross_down, price_greater, price_less].includes(val)) {
- priceGroup.classList.remove(hidden);
- } else if (val === price_cross_indicator) {
- indValGroup.classList.remove(hidden);
- } else if (val === indicator_cross_indicator) {
- indCrossIndGroup.classList.remove(hidden);
- } else if (val === indicator_cross_value) {
- indValGroup.classList.remove(hidden);
- } else if ([channel_exit, channel_enter].includes(val)) {
- channelGroup.classList.remove(hidden);
- }
- });
- },
+            const renderParams = () => {
+                const val = condSelect.value;
+                if (["price_cross_up", "price_cross_down", "price_greater", "price_less"].includes(val)) {
+                    const sObj = this.symbols.find(s => s.symbol === this.symbol);
+                    const defaultP = sObj ? sObj.current_price.toFixed(sObj.decimals) : "1.08500";
+                    container.innerHTML = `
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Target Price Level</label>
+                            <input type="number" step="any" id="modal-target-price" value="${defaultP}" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs font-mono">
+                        </div>
+                    `;
+                } else if (val === "price_cross_indicator") {
+                    container.innerHTML = `
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Indicator</label>
+                                <select id="modal-ind-type" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs">
+                                    <option value="ema">EMA</option>
+                                    <option value="sma">SMA</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Period</label>
+                                <input type="number" id="modal-ind-period" value="50" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Direction</label>
+                                <select id="modal-ind-dir" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs">
+                                    <option value="above">Crosses Above</option>
+                                    <option value="below">Crosses Below</option>
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                } else if (val === "indicator_cross_value") {
+                    container.innerHTML = `
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">RSI Direction</label>
+                                <select id="modal-ind-dir" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs">
+                                    <option value="above">Crosses Above</option>
+                                    <option value="below">Crosses Below</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Threshold (e.g. 70 or 30)</label>
+                                <input type="number" id="modal-rsi-threshold" value="70" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs font-mono">
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Target Price</label>
+                            <input type="number" step="any" id="modal-target-price" value="1.0850" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs font-mono">
+                        </div>
+                    `;
+                }
+            };
 
- async handleCreateAlertSubmit() {
- const symbol = document.getElementById(modal-alert-symbol).value;
- const timeframe = document.getElementById(modal-alert-timeframe).value;
- const condType = document.getElementById(modal-condition-type).value;
- const triggerFreq = document.getElementById(modal-trigger-freq).value;
- const targetEmail = document.getElementById(modal-alert-email).value.trim();
- const webhookUrl = document.getElementById(modal-alert-webhook).value.trim();
- const customMessage = document.getElementById(modal-alert-message).value.trim();
+            condSelect.addEventListener("change", renderParams);
+            renderParams();
+        },
 
- const channels = [];
- if (document.getElementById(modal-ch-push).checked) channels.push(push);
- if (document.getElementById(modal-ch-email).checked && targetEmail) channels.push(email);
- if (document.getElementById(modal-ch-inapp).checked) channels.push(in_app);
- if (document.getElementById(modal-ch-webhook).checked && webhookUrl) channels.push(webhook);
+        async handleCreateAlertSubmit() {
+            const symbol = document.getElementById("modal-symbol").value;
+            const timeframe = document.getElementById("modal-timeframe").value;
+            const condType = document.getElementById("modal-condition-type").value;
+            const freq = document.getElementById("modal-frequency").value;
+            const customMessage = document.getElementById("modal-message").value.trim();
+            const targetEmail = document.getElementById("modal-target-email") ? document.getElementById("modal-target-email").value.trim() : null;
 
- const params = {};
+            const channels = ["in_app"];
+            if (document.getElementById("modal-channel-push").checked) channels.push("push");
+            if (document.getElementById("modal-channel-email").checked && targetEmail) channels.push("email");
 
- if ([price_cross_up, price_cross_down, price_greater, price_less].includes(condType)) {
- params.target_price = parseFloat(document.getElementById(modal-target-price).value);
- } else if (condType === price_cross_indicator) {
- params.direction = document.getElementById(modal-indval-direction).value;
- params.indicator = {
- type: document.getElementById(modal-indval-type).value,
- period: parseInt(document.getElementById(modal-indval-period).value)
- };
- } else if (condType === indicator_cross_indicator) {
- params.direction = document.getElementById(modal-ind1-direction).value;
- params.indicator_1 = {
- type: document.getElementById(modal-ind1-type).value,
- period: parseInt(document.getElementById(modal-ind1-period).value)
- };
- params.indicator_2 = {
- type: document.getElementById(modal-ind2-type).value,
- period: parseInt(document.getElementById(modal-ind2-period).value)
- };
- } else if (condType === indicator_cross_value) {
- params.direction = document.getElementById(modal-indval-direction).value;
- params.threshold = parseFloat(document.getElementById(modal-indval-threshold).value);
- params.indicator = {
- type: document.getElementById(modal-indval-type).value,
- period: parseInt(document.getElementById(modal-indval-period).value)
- };
- } else if ([channel_exit, channel_enter].includes(condType)) {
- params.lower_bound = parseFloat(document.getElementById(modal-channel-lower).value);
- params.upper_bound = parseFloat(document.getElementById(modal-channel-upper).value);
- }
+            const params = {};
+            if (["price_cross_up", "price_cross_down", "price_greater", "price_less"].includes(condType)) {
+                params.target_price = parseFloat(document.getElementById("modal-target-price").value);
+            } else if (condType === "price_cross_indicator") {
+                params.direction = document.getElementById("modal-ind-dir").value;
+                params.indicator = {
+                    type: document.getElementById("modal-ind-type").value,
+                    period: parseInt(document.getElementById("modal-ind-period").value)
+                };
+            } else if (condType === "indicator_cross_value") {
+                params.direction = document.getElementById("modal-ind-dir").value;
+                params.threshold = parseFloat(document.getElementById("modal-rsi-threshold").value);
+                params.indicator = { type: "rsi", period: 14 };
+            }
 
- const alertPayload = {
- symbol: symbol,
- timeframe: timeframe,
- condition_type: condType,
- params: params,
- trigger_frequency: triggerFreq,
- cooldown_minutes: 5,
- channels: channels.length > 0 ? channels : [in_app],
- target_email: targetEmail || null,
- webhook_url: webhookUrl || null,
- message: customMessage || null,
- is_active: true
- };
+            const alertPayload = {
+                symbol: symbol,
+                timeframe: timeframe,
+                condition_type: condType,
+                params: params,
+                trigger_frequency: freq,
+                channels: channels,
+                target_email: targetEmail || null,
+                message: customMessage || null,
+                is_active: true
+            };
 
- try {
- const resp = await fetch(/api/alerts, {
- method: POST,
- headers: { Content-Type: application/json },
- body: JSON.stringify(alertPayload)
- });
+            try {
+                const resp = await fetch("/api/alerts", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(alertPayload)
+                });
 
- if (resp.ok) {
- document.getElementById(alert-modal).classList.add(hidden);
- showToastNotification(Alert Created, Alert for set successfully., success);
- await this.loadAlerts();
- } else {
- const err = await resp.json();
- alert(Error creating alert:  + (err.detail || Check input parameters));
- }
- } catch (e) {
- console.error(Alert creation failed:, e);
- }
- },
+                if (resp.ok) {
+                    document.getElementById("alert-modal").classList.add("hidden");
+                    showToastNotification("Alert Created", `Alert for ${symbol} set successfully.`, "success");
+                    await this.loadAlerts();
+                } else {
+                    const err = await resp.json();
+                    alert("Error creating alert: " + (err.detail || "Check input parameters"));
+                }
+            } catch (e) {
+                console.error("Alert creation failed:", e);
+            }
+        }
+    };
 
- async loadSettingsIntoModal() {
- try {
- const resp = await fetch(/api/settings);
- const s = await resp.json();
- document.getElementById(setting-smtp-host).value = s.smtp_host || ;
- document.getElementById(setting-smtp-port).value = s.smtp_port || 587;
- document.getElementById(setting-smtp-user).value = s.smtp_user || ;
- document.getElementById(setting-smtp-from).value = s.smtp_from_email || ;
- document.getElementById(setting-smtp-tls).checked = s.smtp_use_tls !== false;
- document.getElementById(setting-discord-webhook).value = s.discord_webhook_url || ;
- document.getElementById(setting-twelvedata-key).value = s.twelve_data_api_key || ;
- document.getElementById(setting-finnhub-key).value = s.finnhub_api_key || ;
- } catch (e) {
- console.error(Failed to load settings:, e);
- }
- },
-
- async handleSettingsSubmit() {
- const payload = {
- smtp_host: document.getElementById(setting-smtp-host).value.trim(),
- smtp_port: parseInt(document.getElementById(setting-smtp-port).value) || 587,
- smtp_user: document.getElementById(setting-smtp-user).value.trim(),
- smtp_from_email: document.getElementById(setting-smtp-from).value.trim(),
- smtp_use_tls: document.getElementById(setting-smtp-tls).checked,
- discord_webhook_url: document.getElementById(setting-discord-webhook).value.trim(),
- twelve_data_api_key: document.getElementById(setting-twelvedata-key).value.trim(),
- finnhub_api_key: document.getElementById(setting-finnhub-key).value.trim(),
- };
-
- const pwd = document.getElementById(setting-smtp-pass).value;
- if (pwd) payload.smtp_password = pwd;
-
- try {
- const resp = await fetch(/api/settings, {
- method: POST,
- headers: { Content-Type: application/json },
- body: JSON.stringify(payload)
- });
- if (resp.ok) {
- document.getElementById(settings-modal).classList.add(hidden);
- showToastNotification(Settings Saved, Application settings updated., success);
- }
- } catch (e) {
- console.error(Settings save failed:, e);
- }
- }
- };
-
- window.App = App;
- App.init();
+    window.App = App;
+    App.init();
 });

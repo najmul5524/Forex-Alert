@@ -17,6 +17,7 @@ class AlertCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final conditionTitle = alert.conditionType.replaceAll('_', ' ').toUpperCase();
     String paramDetail = '';
     if (alert.params.containsKey('target_price')) {
@@ -32,14 +33,16 @@ class AlertCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF131D31),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: alert.isActive ? const Color(0xFF334155) : const Color(0xFF1E293B),
+          color: alert.isActive
+              ? (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1))
+              : Theme.of(context).dividerColor,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
+            color: isDark ? Colors.black.withValues(alpha: 0.25) : Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 4),
           )
@@ -53,16 +56,16 @@ class AlertCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0EA5E9).withValues(alpha: 0.2),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFF0EA5E9).withValues(alpha: 0.4)),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   alert.symbol,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
-                    color: Color(0xFF38BDF8),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ),
@@ -70,14 +73,14 @@ class AlertCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.06),
+                  color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   alert.timeframe,
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.blueGrey.shade300,
+                    color: isDark ? Colors.blueGrey.shade300 : Colors.blueGrey.shade700,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -85,10 +88,10 @@ class AlertCard extends StatelessWidget {
               const Spacer(),
               Switch(
                 value: alert.isActive,
-                activeThumbColor: const Color(0xFF34D399),
-                activeTrackColor: const Color(0xFF10B981).withValues(alpha: 0.4),
-                inactiveThumbColor: Colors.blueGrey.shade600,
-                inactiveTrackColor: const Color(0xFF1E293B),
+                activeThumbColor: const Color(0xFF10B981),
+                activeTrackColor: const Color(0xFF10B981).withValues(alpha: 0.3),
+                inactiveThumbColor: Colors.blueGrey.shade400,
+                inactiveTrackColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
                 onChanged: onToggle,
               ),
             ],
@@ -96,10 +99,10 @@ class AlertCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             conditionTitle,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 13,
-              color: Colors.amberAccent,
+              color: isDark ? Colors.amberAccent : Colors.orange.shade800,
             ),
           ),
           const SizedBox(height: 3),
@@ -108,7 +111,7 @@ class AlertCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontFamily: 'monospace',
-              color: Colors.blueGrey.shade200,
+              color: isDark ? Colors.blueGrey.shade200 : Colors.blueGrey.shade800,
             ),
           ),
           if (alert.message != null && alert.message!.isNotEmpty) ...[
@@ -116,21 +119,21 @@ class AlertCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF0F172A),
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.indigo.withValues(alpha: 0.3)),
+                border: Border.all(color: Colors.indigo.withValues(alpha: 0.2)),
               ),
               child: Text(
                 'Note: ${alert.message}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
-                  color: Color(0xFFA5B4FC),
+                  color: isDark ? const Color(0xFFA5B4FC) : const Color(0xFF4338CA),
                 ),
               ),
             ),
           ],
           const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFF1E293B)),
+          Divider(height: 1, color: Theme.of(context).dividerColor),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -138,15 +141,15 @@ class AlertCard extends StatelessWidget {
                 'Fired: ${alert.triggerCount}x',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.blueGrey.shade400,
+                  color: isDark ? Colors.blueGrey.shade400 : Colors.blueGrey.shade600,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const Spacer(),
               TextButton.icon(
                 onPressed: onTestTrigger,
-                icon: const Icon(Icons.bolt, size: 14, color: Color(0xFF38BDF8)),
-                label: const Text('Test', style: TextStyle(fontSize: 11, color: Color(0xFF38BDF8))),
+                icon: Icon(Icons.bolt, size: 14, color: Theme.of(context).colorScheme.primary),
+                label: Text('Test', style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.primary)),
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   minimumSize: Size.zero,

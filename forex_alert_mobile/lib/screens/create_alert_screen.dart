@@ -131,10 +131,14 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = Theme.of(context).colorScheme.surface;
+    final containerColor = isDark ? const Color(0xFF131D31) : const Color(0xFFF8FAFC);
+
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF0F172A),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
@@ -154,7 +158,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.blueGrey.shade700,
+                    color: isDark ? Colors.blueGrey.shade700 : Colors.blueGrey.shade300,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -164,17 +168,17 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                 children: [
                   const Text('⚡', style: TextStyle(fontSize: 20)),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'Create Market Alert',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.blueGrey),
+                    icon: Icon(Icons.close, color: Colors.blueGrey.shade400),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -188,21 +192,21 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Instrument', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+                        Text('Instrument', style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade400)),
                         const SizedBox(height: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF131D31),
+                            color: containerColor,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF334155)),
+                            border: Border.all(color: Theme.of(context).dividerColor),
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<String>(
                               value: _selectedSymbol,
                               isExpanded: true,
-                              dropdownColor: const Color(0xFF131D31),
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              dropdownColor: surfaceColor,
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
                               items: _symbols.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                               onChanged: (v) => setState(() => _selectedSymbol = v!),
                             ),
@@ -217,21 +221,21 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Timeframe', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+                        Text('Timeframe', style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade400)),
                         const SizedBox(height: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF131D31),
+                            color: containerColor,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF334155)),
+                            border: Border.all(color: Theme.of(context).dividerColor),
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<String>(
                               value: _selectedTimeframe,
                               isExpanded: true,
-                              dropdownColor: const Color(0xFF131D31),
-                              style: const TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.bold),
+                              dropdownColor: surfaceColor,
+                              style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
                               items: _timeframes.map((tf) => DropdownMenuItem(value: tf, child: Text(tf))).toList(),
                               onChanged: (v) => setState(() => _selectedTimeframe = v!),
                             ),
@@ -244,21 +248,25 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
               ),
               const SizedBox(height: 16),
 
-              const Text('Trigger Condition', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+              Text('Trigger Condition', style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade400)),
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF131D31),
+                  color: containerColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF334155)),
+                  border: Border.all(color: Theme.of(context).dividerColor),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _selectedCondition,
                     isExpanded: true,
-                    dropdownColor: const Color(0xFF131D31),
-                    style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.w600, fontSize: 13),
+                    dropdownColor: surfaceColor,
+                    style: TextStyle(
+                      color: isDark ? Colors.amberAccent : Colors.orange.shade800,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                     items: _conditions.entries
                         .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, overflow: TextOverflow.ellipsis)))
                         .toList(),
@@ -269,20 +277,20 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
               const SizedBox(height: 16),
 
               if (['price_cross_up', 'price_cross_down', 'price_greater', 'price_less'].contains(_selectedCondition)) ...[
-                const Text('Target Level Price', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+                Text('Target Level Price', style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade400)),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _targetPriceController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontFamily: 'monospace', fontWeight: FontWeight.bold),
                   decoration: InputDecoration(
                     hintText: '1.08550',
-                    hintStyle: TextStyle(color: Colors.blueGrey.shade600),
+                    hintStyle: TextStyle(color: isDark ? Colors.blueGrey.shade600 : Colors.blueGrey.shade400),
                     filled: true,
-                    fillColor: const Color(0xFF131D31),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF334155))),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF334155))),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF38BDF8))),
+                    fillColor: containerColor,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).dividerColor)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).dividerColor)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).colorScheme.primary)),
                   ),
                   validator: (v) => (v == null || v.isEmpty) ? 'Please enter a target price' : null,
                 ),
@@ -295,21 +303,21 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Direction', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+                          Text('Direction', style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade400)),
                           const SizedBox(height: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF131D31),
+                              color: containerColor,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFF334155)),
+                              border: Border.all(color: Theme.of(context).dividerColor),
                             ),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
                                 value: _indicatorDirection,
                                 isExpanded: true,
-                                dropdownColor: const Color(0xFF131D31),
-                                style: const TextStyle(color: Colors.white),
+                                dropdownColor: surfaceColor,
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                                 items: const [
                                   DropdownMenuItem(value: 'above', child: Text('Crosses Above')),
                                   DropdownMenuItem(value: 'below', child: Text('Crosses Below')),
@@ -326,16 +334,17 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Period', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+                          Text('Period', style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade400)),
                           const SizedBox(height: 6),
                           TextFormField(
                             controller: _indicatorPeriodController,
                             keyboardType: TextInputType.number,
-                            style: const TextStyle(color: Colors.white, fontFamily: 'monospace'),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontFamily: 'monospace'),
                             decoration: InputDecoration(
                               filled: true,
-                              fillColor: const Color(0xFF131D31),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF334155))),
+                              fillColor: containerColor,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).dividerColor)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).dividerColor)),
                             ),
                           ),
                         ],
@@ -347,37 +356,38 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
 
               if (_selectedCondition == 'indicator_cross_value') ...[
                 const SizedBox(height: 12),
-                const Text('Threshold (e.g. 70 for Overbought, 30 for Oversold)', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+                Text('Threshold (e.g. 70 for Overbought, 30 for Oversold)', style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade400)),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _rsiThresholdController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: const TextStyle(color: Colors.white, fontFamily: 'monospace'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontFamily: 'monospace'),
                   decoration: InputDecoration(
                     filled: true,
-                    fillColor: const Color(0xFF131D31),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF334155))),
+                    fillColor: containerColor,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).dividerColor)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).dividerColor)),
                   ),
                 ),
               ],
 
               const SizedBox(height: 16),
 
-              const Text('Trigger Frequency', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+              Text('Trigger Frequency', style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade400)),
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF131D31),
+                  color: containerColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF334155)),
+                  border: Border.all(color: Theme.of(context).dividerColor),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _triggerFrequency,
                     isExpanded: true,
-                    dropdownColor: const Color(0xFF131D31),
-                    style: const TextStyle(color: Colors.white),
+                    dropdownColor: surfaceColor,
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     items: const [
                       DropdownMenuItem(value: 'only_once', child: Text('Only Once (Auto-deactivate)')),
                       DropdownMenuItem(value: 'once_per_bar', child: Text('Once Per Bar')),
@@ -393,24 +403,24 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF131D31),
+                  color: containerColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF334155)),
+                  border: Border.all(color: Theme.of(context).dividerColor),
                 ),
                 child: Column(
                   children: [
                     CheckboxListTile(
                       value: _sendPush,
-                      title: const Text('📱 Smartphone Push Alert', style: TextStyle(color: Colors.white, fontSize: 13)),
-                      activeColor: const Color(0xFF38BDF8),
+                      title: Text('📱 Smartphone Push Alert', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13)),
+                      activeColor: Theme.of(context).colorScheme.primary,
                       contentPadding: EdgeInsets.zero,
                       dense: true,
                       onChanged: (v) => setState(() => _sendPush = v ?? true),
                     ),
                     CheckboxListTile(
                       value: _sendEmail,
-                      title: const Text('✉️ Email Notification', style: TextStyle(color: Colors.white, fontSize: 13)),
-                      activeColor: const Color(0xFF38BDF8),
+                      title: Text('✉️ Email Notification', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13)),
+                      activeColor: Theme.of(context).colorScheme.primary,
                       contentPadding: EdgeInsets.zero,
                       dense: true,
                       onChanged: (v) => setState(() => _sendEmail = v ?? false),
@@ -424,15 +434,15 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   decoration: InputDecoration(
                     hintText: 'your_email@gmail.com',
-                    hintStyle: TextStyle(color: Colors.blueGrey.shade600),
+                    hintStyle: TextStyle(color: Colors.blueGrey.shade400),
                     labelText: 'Recipient Email',
-                    labelStyle: const TextStyle(color: Colors.blueGrey),
+                    labelStyle: TextStyle(color: Colors.blueGrey.shade400),
                     filled: true,
-                    fillColor: const Color(0xFF131D31),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    fillColor: containerColor,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).dividerColor)),
                   ),
                 ),
               ],
@@ -440,15 +450,15 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _messageController,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 decoration: InputDecoration(
                   hintText: 'e.g. Look for 5m reversal entry!',
-                  hintStyle: TextStyle(color: Colors.blueGrey.shade600),
+                  hintStyle: TextStyle(color: Colors.blueGrey.shade400),
                   labelText: 'Custom Note / Message',
-                  labelStyle: const TextStyle(color: Colors.blueGrey),
+                  labelStyle: TextStyle(color: Colors.blueGrey.shade400),
                   filled: true,
-                  fillColor: const Color(0xFF131D31),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  fillColor: containerColor,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).dividerColor)),
                 ),
               ),
 
@@ -459,7 +469,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                 child: ElevatedButton(
                   onPressed: _isSaving ? null : _submitAlert,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0EA5E9),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),

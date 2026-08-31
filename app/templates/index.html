@@ -1,11 +1,11 @@
 ﻿<!DOCTYPE html>
-<html lang=en class=dark>
+<html lang="en" class="dark">
 <head>
-    <meta charset=UTF-8>
-    <meta name=viewport content=width=device-width, initial-scale=1.0>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Market Alert Engine | TradingView Style</title>
     <!-- Tailwind CSS CDN -->
-    <script src=https://cdn.tailwindcss.com></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -22,149 +22,158 @@
         }
     </script>
     <!-- TradingView Lightweight Charts CDN -->
-    <script src=https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js></script>
+    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
     <!-- Custom Styles -->
-    <link rel=stylesheet href=/static/css/styles.css>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="manifest" href="/static/manifest.json">
     <script>
         window.VAPID_PUBLIC_KEY = {{ vapid_public_key }};
     </script>
 </head>
-<body class=bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-sky-500 selection:text-white>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-sky-500 selection:text-white transition-colors duration-200">
 
     <!-- Toast Notification Container -->
-    <div id=toast-container class=fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none *:pointer-events-auto></div>
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none *:pointer-events-auto"></div>
 
     <!-- Top Navigation Header -->
-    <header class=bg-slate-900 border-b border-slate-800 px-5 py-3 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40 shadow-lg>
-        <div class=flex items-center gap-3>
-            <div class=w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-extrabold text-lg>
+    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-5 py-3 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40 shadow-sm dark:shadow-lg transition-colors">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-extrabold text-lg">
                 ⚡
             </div>
             <div>
-                <h1 class=font-bold text-base tracking-tight text-white flex items-center gap-2>
+                <h1 class="font-bold text-base tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                     Live Market Alert Engine
-                    <span class=text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800/80>Real-Time</span>
+                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/80">Real-Time</span>
                 </h1>
-                <div class=flex items-center gap-2 text-xs text-slate-400>
-                    <span id=ws-status-dot class=w-2 h-2 rounded-full bg-amber-500></span>
-                    <span id=ws-status-text>Connecting...</span>
+                <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <span id="ws-status-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <span id="ws-status-text">Connecting...</span>
                 </div>
             </div>
         </div>
 
         <!-- Middle: Current Selected Instrument Banner -->
-        <div class=hidden md:flex items-center gap-4 bg-slate-850 px-4 py-1.5 rounded-xl border border-slate-800>
-            <div class=text-sm font-bold text-slate-200 id=current-symbol-title>EUR / USD (EURUSD)</div>
-            <div class=text-base font-mono font-extrabold text-sky-400 tracking-wider id=current-symbol-price>1.08500</div>
+        <div class="hidden md:flex items-center gap-4 bg-slate-100 dark:bg-slate-850 px-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div class="text-sm font-bold text-slate-800 dark:text-slate-200" id="current-symbol-title">EUR / USD (EURUSD)</div>
+            <div class="text-base font-mono font-extrabold text-sky-600 dark:text-sky-400 tracking-wider" id="current-symbol-price">1.08500</div>
         </div>
 
         <!-- Right: Actions & Modals -->
-        <div class=flex items-center gap-2.5>
-            <button id=enable-push-btn class=px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800/80 transition-all flex items-center gap-1.5>
+        <div class="flex items-center gap-2.5">
+            <!-- Light/Dark Mode Switcher -->
+            <button id="theme-toggle-btn" class="p-2 rounded-lg text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-all text-xs flex items-center gap-1.5" title="Toggle Light / Dark Mode">
+                <span id="theme-toggle-icon">🌙</span> <span class="hidden sm:inline font-medium">Theme</span>
+            </button>
+            <button id="enable-push-btn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-50 dark:bg-sky-950 hover:bg-sky-100 dark:hover:bg-sky-900 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/80 transition-all flex items-center gap-1.5">
                 <span>📱</span> Enable Push Alerts
             </button>
-            <button id=open-settings-btn class=p-2 rounded-lg text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all text-xs flex items-center gap-1>
+            <button id="open-settings-btn" class="p-2 rounded-lg text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-all text-xs flex items-center gap-1">
                 <span>⚙️</span> Settings
             </button>
-            <button id=open-alert-modal-btn class=px-4 py-2 rounded-lg text-xs font-bold bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white shadow-md shadow-sky-500/25 transition-all flex items-center gap-1.5 active:scale-95>
+            <button id="open-alert-modal-btn" class="px-4 py-2 rounded-lg text-xs font-bold bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white shadow-md shadow-sky-500/25 transition-all flex items-center gap-1.5 active:scale-95">
                 <span>+</span> Create Alert
             </button>
         </div>
     </header>
 
     <!-- Sub-header: Chart Controls & Indicators -->
-    <div class=bg-slate-900/90 border-b border-slate-800 px-5 py-2 flex flex-wrap items-center justify-between gap-3 text-xs>
-        <div class=flex items-center gap-4 flex-wrap>
+    <div class="bg-slate-100 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 px-5 py-2 flex flex-wrap items-center justify-between gap-3 text-xs transition-colors">
+        <div class="flex items-center gap-4 flex-wrap">
             <!-- Timeframe selector -->
-            <div class=flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800>
-                <button class=tf-btn px-2.5 py-1 rounded-md font-semibold bg-sky-600 text-white data-tf=1m>1m</button>
-                <button class=tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-400 hover:bg-slate-800 data-tf=5m>5m</button>
-                <button class=tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-400 hover:bg-slate-800 data-tf=15m>15m</button>
-                <button class=tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-400 hover:bg-slate-800 data-tf=1h>1h</button>
-                <button class=tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-400 hover:bg-slate-800 data-tf=4h>4h</button>
-                <button class=tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-400 hover:bg-slate-800 data-tf=1d>1D</button>
+            <div class="flex items-center bg-white dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                <button class="tf-btn px-2.5 py-1 rounded-md font-semibold bg-sky-600 text-white" data-tf="1m">1m</button>
+                <button class="tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="5m">5m</button>
+                <button class="tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="15m">15m</button>
+                <button class="tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="1h">1h</button>
+                <button class="tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="4h">4h</button>
+                <button class="tf-btn px-2.5 py-1 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="1d">1D</button>
             </div>
 
             <!-- Indicator Toggles -->
-            <div class=flex items-center gap-3 border-l border-slate-800 pl-4>
-                <span class=text-slate-400 font-medium>Overlays:</span>
-                <label class=flex items-center gap-1.5 cursor-pointer text-sky-400 font-medium>
-                    <input type=checkbox class=indicator-toggle rounded bg-slate-950 border-slate-700 text-sky-500 data-indicator=ema20>
+            <div class="flex items-center gap-3 border-l border-slate-200 dark:border-slate-800 pl-4">
+                <span class="text-slate-500 dark:text-slate-400 font-medium">Overlays:</span>
+                <label class="flex items-center gap-1.5 cursor-pointer text-sky-600 dark:text-sky-400 font-medium">
+                    <input type="checkbox" class="indicator-toggle rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-sky-500" data-indicator="ema20">
                     EMA 20
                 </label>
-                <label class=flex items-center gap-1.5 cursor-pointer text-amber-400 font-medium>
-                    <input type=checkbox class=indicator-toggle rounded bg-slate-950 border-slate-700 text-amber-500 data-indicator=ema50>
+                <label class="flex items-center gap-1.5 cursor-pointer text-amber-600 dark:text-amber-400 font-medium">
+                    <input type="checkbox" class="indicator-toggle rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-amber-500" data-indicator="ema50">
                     EMA 50
                 </label>
-                <label class=flex items-center gap-1.5 cursor-pointer text-rose-400 font-medium>
-                    <input type=checkbox class=indicator-toggle rounded bg-slate-950 border-slate-700 text-rose-500 data-indicator=ema200>
+                <label class="flex items-center gap-1.5 cursor-pointer text-rose-600 dark:text-rose-400 font-medium">
+                    <input type="checkbox" class="indicator-toggle rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-rose-500" data-indicator="ema200">
                     EMA 200
                 </label>
-                <label class=flex items-center gap-1.5 cursor-pointer text-indigo-400 font-medium>
-                    <input type=checkbox class=indicator-toggle rounded bg-slate-950 border-slate-700 text-indigo-500 data-indicator=bb>
+                <label class="flex items-center gap-1.5 cursor-pointer text-indigo-600 dark:text-indigo-400 font-medium">
+                    <input type="checkbox" class="indicator-toggle rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-indigo-500" data-indicator="bb">
                     Bollinger Bands
                 </label>
             </div>
         </div>
 
         <!-- Quick Price Simulator Injection -->
-        <div class=flex items-center gap-2 bg-slate-950 px-3 py-1 rounded-lg border border-slate-800>
-            <span class=text-slate-400 text-[11px]>⚡ Test Price Cross:</span>
-            <input type=number step=any id=simulate-price-input placeholder=e.g. 1.08550 class=bg-slate-900 border border-slate-700 text-slate-100 rounded px-2 py-0.5 text-xs w-28 focus:outline-none focus:border-sky-500 font-mono>
-            <button id=simulate-tick-btn class=bg-sky-600 hover:bg-sky-500 text-white font-semibold px-2 py-0.5 rounded text-[11px] transition-all>
+        <div class="flex items-center gap-2 bg-white dark:bg-slate-950 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
+            <span class="text-slate-500 dark:text-slate-400 text-[11px]">⚡ Test Price Cross:</span>
+            <input type="number" step="any" id="simulate-price-input" placeholder="e.g. 1.08550" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded px-2 py-0.5 text-xs w-28 focus:outline-none focus:border-sky-500 font-mono">
+            <button id="simulate-tick-btn" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold px-2 py-0.5 rounded text-[11px] transition-all">
                 Inject Tick
             </button>
         </div>
     </div>
 
     <!-- Main Content Layout -->
-    <main class=flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 min-h-0>
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 min-h-0">
         
         <!-- Left: Interactive Chart (8 Cols) -->
-        <section class=lg:col-span-8 flex flex-col bg-slate-900 rounded-2xl border border-slate-800 shadow-xl overflow-hidden min-h-[500px]>
-            <div class=p-3 bg-slate-850 border-b border-slate-800 flex items-center justify-between>
-                <div class=flex items-center gap-2 text-xs font-semibold text-slate-300>
+        <section class="lg:col-span-8 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-xl overflow-hidden min-h-[500px] transition-colors">
+            <div class="p-3 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
                     <span>📈 TradingView Interactive Candle Chart</span>
-                    <span class=text-[11px] text-slate-500>(Dashed lines represent active alert trigger levels)</span>
+                    <span class="text-[11px] text-slate-400 dark:text-slate-500">(Dashed lines represent active alert trigger levels)</span>
                 </div>
             </div>
-            <div class=flex-1 relative p-2 id=chart-container></div>
+            <div class="flex-1 relative p-2" id="chart-container"></div>
         </section>
 
         <!-- Right: Instruments, Alerts & Logs (4 Cols) -->
-        <section class=lg:col-span-4 flex flex-col gap-4 min-h-0>
+        <section class="lg:col-span-4 flex flex-col gap-4 min-h-0">
             
             <!-- Instruments List -->
-            <div class=bg-slate-900 rounded-2xl border border-slate-800 p-3 shadow-lg>
-                <div class=text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between>
+            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm dark:shadow-lg transition-colors">
+                <div class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 flex items-center justify-between">
                     <span>Instruments (Live Rates)</span>
-                    <span class=text-[10px] text-sky-400>Click to switch</span>
+                    <span class="text-[10px] text-slate-400">Click to Chart</span>
                 </div>
-                <div class=grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1 id=symbol-list>
-                    <!-- Dynamic Symbols Rendered Here -->
+                <div class="grid grid-cols-3 gap-2" id="symbols-grid">
+                    <!-- Dynamic symbol cards -->
                 </div>
             </div>
 
-            <!-- Active Alerts Manager -->
-            <div class=bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-lg flex-1 flex flex-col min-h-0>
-                <div class=flex items-center justify-between pb-3 border-b border-slate-800>
-                    <div class=flex items-center gap-2>
-                        <span class=font-bold text-sm text-slate-200>Active Alert Rules</span>
-                        <span id=active-alerts-count class=px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-950 text-sky-400 border border-sky-800>0</span>
+            <!-- Active Alerts Panel -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 flex-1 flex flex-col min-h-[220px] shadow-sm dark:shadow-lg transition-colors">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800 mb-2">
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                        <span>Active Alert Rules</span>
+                        <span id="alerts-count-badge" class="px-2 py-0.5 rounded-full text-[10px] bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">0</span>
                     </div>
                 </div>
-                <div class=flex-1 overflow-y-auto space-y-2.5 py-3 pr-1 max-h-[300px] id=alerts-list-container>
-                    <!-- Dynamic Alert Cards Rendered Here -->
+                <div class="flex-1 overflow-y-auto space-y-2 pr-1 max-h-56" id="alerts-list">
+                    <!-- Dynamic alert cards -->
                 </div>
             </div>
 
-            <!-- Live Trigger Log History -->
-            <div class=bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-lg>
-                <div class=flex items-center justify-between pb-2 border-b border-slate-800 text-xs font-bold text-slate-300>
-                    <span>🚨 Triggered History (Recent)</span>
+            <!-- Real-time Triggered Log Feed -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 flex-1 flex flex-col min-h-[200px] shadow-sm dark:shadow-lg transition-colors">
+                <div class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                        Triggered History
+                    </span>
+                    <span class="text-[10px] text-slate-400">Live Feed</span>
                 </div>
-                <div class=space-y-2 mt-3 max-h-44 overflow-y-auto pr-1 id=trigger-logs-container>
-                    <!-- Dynamic Logs Rendered Here -->
+                <div class="flex-1 overflow-y-auto space-y-2 pr-1 max-h-48" id="trigger-logs-list">
+                    <!-- Dynamic logs -->
                 </div>
             </div>
 
@@ -172,305 +181,149 @@
 
     </main>
 
-    <!-- Modal: Create Alert (TradingView Style Wizard) -->
-    <div id=alert-modal class=fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden>
-        <div class=bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden transform transition-all>
-            <div class=bg-slate-850 px-5 py-4 border-b border-slate-800 flex items-center justify-between>
-                <h3 class=font-bold text-base text-slate-100 flex items-center gap-2>
-                    <span>⚡</span> Create Market Alert
+    <!-- Create Alert Modal -->
+    <div id="alert-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150 transition-colors">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-850">
+                <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
+                    <span>⚡</span> Create New Market Alert
                 </h3>
-                <button id=close-alert-modal-btn class=text-slate-400 hover:text-white text-lg>✕</button>
+                <button id="close-alert-modal-btn" class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg">&times;</button>
             </div>
-
-            <form id=create-alert-form class=p-5 space-y-4 max-h-[80vh] overflow-y-auto text-xs>
-                
-                <!-- Pair & Timeframe -->
-                <div class=grid grid-cols-2 gap-3>
+            
+            <form id="create-alert-form" class="p-5 space-y-4 overflow-y-auto">
+                <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class=block font-semibold text-slate-300 mb-1>Instrument</label>
-                        <select id=modal-alert-symbol class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-sky-500>
-                            <option value=EURUSD>EUR / USD (EURUSD)</option>
-                            <option value=GBPUSD>GBP / USD (GBPUSD)</option>
-                            <option value=USDJPY>USD / JPY (USDJPY)</option>
-                            <option value=XAUUSD>Gold / USD (XAUUSD)</option>
-                            <option value=AUDUSD>AUD / USD (AUDUSD)</option>
-                            <option value=USDCAD>USD / CAD (USDCAD)</option>
-                            <option value=BTCUSDT>Bitcoin / USDT (BTCUSDT)</option>
-                            <option value=ETHUSDT>Ethereum / USDT (ETHUSDT)</option>
-                            <option value=SOLUSDT>Solana / USDT (SOLUSDT)</option>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Instrument</label>
+                        <select id="modal-symbol" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs focus:ring-1 focus:ring-sky-500">
+                            <option value="EURUSD">EURUSD (EUR / USD)</option>
+                            <option value="GBPUSD">GBPUSD (GBP / USD)</option>
+                            <option value="USDJPY">USDJPY (USD / JPY)</option>
+                            <option value="XAUUSD">XAUUSD (Gold / USD)</option>
+                            <option value="AUDUSD">AUDUSD (AUD / USD)</option>
+                            <option value="USDCAD">USDCAD (USD / CAD)</option>
+                            <option value="BTCUSDT">BTCUSDT (Bitcoin)</option>
+                            <option value="ETHUSDT">ETHUSDT (Ethereum)</option>
+                            <option value="SOLUSDT">SOLUSDT (Solana)</option>
                         </select>
                     </div>
                     <div>
-                        <label class=block font-semibold text-slate-300 mb-1>Timeframe</label>
-                        <select id=modal-alert-timeframe class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-sky-500>
-                            <option value=1m>1 minute</option>
-                            <option value=5m>5 minutes</option>
-                            <option value=15m>15 minutes</option>
-                            <option value=1h>1 hour</option>
-                            <option value=4h>4 hours</option>
-                            <option value=1d>1 Day</option>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Timeframe</label>
+                        <select id="modal-timeframe" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs focus:ring-1 focus:ring-sky-500">
+                            <option value="1m">1m</option>
+                            <option value="5m">5m</option>
+                            <option value="15m">15m</option>
+                            <option value="1h">1h</option>
+                            <option value="4h">4h</option>
+                            <option value="1d">1D</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- Condition Type -->
                 <div>
-                    <label class=block font-semibold text-slate-300 mb-1>Trigger Condition</label>
-                    <select id=modal-condition-type class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-sky-500 font-medium>
-                        <optgroup label=Price Level Conditions>
-                            <option value=price_cross_up>Crossing Up (Price crosses above level)</option>
-                            <option value=price_cross_down>Crossing Down (Price crosses below level)</option>
-                            <option value=price_greater>Greater Than (Price &gt; level)</option>
-                            <option value=price_less>Less Than (Price &lt; level)</option>
-                        </optgroup>
-                        <optgroup label=Indicator Conditions>
-                            <option value=price_cross_indicator>Price Crosses Indicator (e.g. Price vs EMA / Bollinger)</option>
-                            <option value=indicator_cross_indicator>Indicator Crosses Indicator (e.g. Fast EMA crosses Slow EMA)</option>
-                            <option value=indicator_cross_value>Indicator Crosses Value (e.g. RSI crosses 70 / 30)</option>
-                        </optgroup>
-                        <optgroup label=Channel Conditions>
-                            <option value=channel_exit>Exiting Channel (Price leaves range)</option>
-                            <option value=channel_enter>Entering Channel (Price enters range)</option>
-                        </optgroup>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Condition Type</label>
+                    <select id="modal-condition-type" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs focus:ring-1 focus:ring-sky-500">
+                        <option value="price_cross_up">Price Crossing Up (Target Level)</option>
+                        <option value="price_cross_down">Price Crossing Down (Target Level)</option>
+                        <option value="price_greater">Price Greater Than Or Equal</option>
+                        <option value="price_less">Price Less Than Or Equal</option>
+                        <option value="price_cross_indicator">Price Crosses Technical Indicator (EMA / SMA / BB)</option>
+                        <option value="indicator_cross_indicator">Indicator Crosses Indicator (e.g. 50 EMA crosses 200 EMA)</option>
+                        <option value="indicator_cross_value">Indicator Crosses Value (e.g. RSI > 70 or < 30)</option>
+                        <option value="channel_exit">Channel Exit (Breaks above/below channel)</option>
                     </select>
                 </div>
 
-                <!-- Dynamic Param Groups -->
-                <!-- 1. Price Target -->
-                <div id=group-target-price>
-                    <label class=block font-semibold text-slate-300 mb-1>Target Price</label>
-                    <input type=number step=any id=modal-target-price placeholder=1.08500 class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-sky-500 font-mono>
+                <!-- Dynamic Param Fields Container -->
+                <div id="dynamic-params-container" class="space-y-3 p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+                    <!-- Dynamic injected inputs via JS -->
                 </div>
 
-                <!-- 2. Single Indicator / Value Cross -->
-                <div id=group-ind-value class=hidden space-y-3 p-3 bg-slate-950 rounded-xl border border-slate-800>
-                    <div class=grid grid-cols-3 gap-2>
-                        <div>
-                            <label class=block text-slate-400 mb-1>Direction</label>
-                            <select id=modal-indval-direction class=w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100>
-                                <option value=above>Crosses Above</option>
-                                <option value=below>Crosses Below</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class=block text-slate-400 mb-1>Indicator</label>
-                            <select id=modal-indval-type class=w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100>
-                                <option value=ema>EMA</option>
-                                <option value=sma>SMA</option>
-                                <option value=rsi>RSI</option>
-                                <option value=bollinger>Bollinger Bands</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class=block text-slate-400 mb-1>Period</label>
-                            <input type=number id=modal-indval-period value=14 class=w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100 font-mono>
-                        </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Trigger Frequency</label>
+                        <select id="modal-frequency" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs focus:ring-1 focus:ring-sky-500">
+                            <option value="only_once">Only Once (Auto-deactivate)</option>
+                            <option value="once_per_bar">Once Per Bar</option>
+                            <option value="once_per_bar_close">Once Per Bar Close</option>
+                            <option value="every_time">Every Time (with cooldown)</option>
+                        </select>
                     </div>
                     <div>
-                        <label class=block text-slate-400 mb-1>Threshold Value (For RSI / Oscillator)</label>
-                        <input type=number step=any id=modal-indval-threshold value=70.0 class=w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100 font-mono>
-                    </div>
-                </div>
-
-                <!-- 3. Indicator Cross Indicator -->
-                <div id=group-ind-cross-ind class=hidden space-y-3 p-3 bg-slate-950 rounded-xl border border-slate-800>
-                    <div class=text-[11px] text-sky-400 font-semibold>Indicator 1 (Fast / Signal)</div>
-                    <div class=grid grid-cols-3 gap-2>
-                        <div>
-                            <label class=block text-slate-400 mb-1>Type</label>
-                            <select id=modal-ind1-type class=w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100>
-                                <option value=ema>EMA</option>
-                                <option value=sma>SMA</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class=block text-slate-400 mb-1>Period</label>
-                            <input type=number id=modal-ind1-period value=20 class=w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100 font-mono>
-                        </div>
-                        <div>
-                            <label class=block text-slate-400 mb-1>Cross Direction</label>
-                            <select id=modal-ind1-direction class=w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100>
-                                <option value=above>Crosses Above</option>
-                                <option value=below>Crosses Below</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class=text-[11px] text-amber-400 font-semibold pt-1>Indicator 2 (Slow / Benchmark)</div>
-                    <div class=grid grid-cols-2 gap-2>
-                        <div>
-                            <label class=block text-slate-400 mb-1>Type</label>
-                            <select id=modal-ind2-type class=w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100>
-                                <option value=ema>EMA</option>
-                                <option value=sma>SMA</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class=block text-slate-400 mb-1>Period</label>
-                            <input type=number id=modal-ind2-period value=50 class=w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100 font-mono>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Notification Channels</label>
+                        <div class="space-y-1.5 text-xs text-slate-700 dark:text-slate-300 pt-1">
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" id="modal-channel-push" checked class="rounded text-sky-500 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700">
+                                <span>📱 Push Notification</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" id="modal-channel-email" class="rounded text-sky-500 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700">
+                                <span>✉️ Email Alert</span>
+                            </label>
                         </div>
                     </div>
                 </div>
 
-                <!-- 4. Channel -->
-                <div id=group-channel class=hidden grid grid-cols-2 gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800>
-                    <div>
-                        <label class=block text-slate-400 mb-1>Lower Price Bound</label>
-                        <input type=number step=any id=modal-channel-lower placeholder=1.08000 class=w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100 font-mono>
-                    </div>
-                    <div>
-                        <label class=block text-slate-400 mb-1>Upper Price Bound</label>
-                        <input type=number step=any id=modal-channel-upper placeholder=1.09000 class=w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100 font-mono>
-                    </div>
+                <div id="modal-email-row" class="hidden">
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Target Email</label>
+                    <input type="email" id="modal-target-email" placeholder="you@example.com" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs">
                 </div>
 
-                <!-- Trigger Frequency -->
                 <div>
-                    <label class=block font-semibold text-slate-300 mb-1>Trigger Frequency</label>
-                    <select id=modal-trigger-freq class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-sky-500>
-                        <option value=only_once>Only Once (Deactivates after firing)</option>
-                        <option value=once_per_bar>Once Per Bar</option>
-                        <option value=once_per_bar_close>Once Per Bar Close (Confirmed bar)</option>
-                        <option value=every_time>Every Time (Continuous with 5m cooldown)</option>
-                    </select>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Custom Note / Alert Message (Optional)</label>
+                    <input type="text" id="modal-message" placeholder="e.g. Major breakout detected! Look for retest entry." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs">
                 </div>
 
-                <!-- Notification Channels -->
-                <div class=space-y-2 p-3 bg-slate-950 rounded-xl border border-slate-800>
-                    <label class=block font-semibold text-slate-300>Notification Channels</label>
-                    <div class=grid grid-cols-2 gap-2>
-                        <label class=flex items-center gap-2 cursor-pointer text-slate-200>
-                            <input type=checkbox id=modal-ch-push checked class=rounded bg-slate-900 border-slate-700 text-sky-500>
-                            <span>📱 Browser Web Push</span>
-                        </label>
-                        <label class=flex items-center gap-2 cursor-pointer text-slate-200>
-                            <input type=checkbox id=modal-ch-inapp checked class=rounded bg-slate-900 border-slate-700 text-sky-500>
-                            <span>🔊 Sound & In-App Toast</span>
-                        </label>
-                        <label class=flex items-center gap-2 cursor-pointer text-slate-200>
-                            <input type=checkbox id=modal-ch-email class=rounded bg-slate-900 border-slate-700 text-sky-500>
-                            <span>✉️ Email Alert</span>
-                        </label>
-                        <label class=flex items-center gap-2 cursor-pointer text-slate-200>
-                            <input type=checkbox id=modal-ch-webhook class=rounded bg-slate-900 border-slate-700 text-sky-500>
-                            <span>🔗 Webhook / Discord</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Target Email -->
-                <div>
-                    <label class=block font-semibold text-slate-300 mb-1>Target Email (For Email Alerts)</label>
-                    <input type=email id=modal-alert-email placeholder=you@example.com class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-sky-500>
-                </div>
-
-                <!-- Custom Webhook -->
-                <div>
-                    <label class=block font-semibold text-slate-300 mb-1>Custom Webhook URL (Optional)</label>
-                    <input type=url id=modal-alert-webhook placeholder=https://your-server.com/webhook class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-sky-500 font-mono text-xs>
-                </div>
-
-                <!-- Custom Note -->
-                <div>
-                    <label class=block font-semibold text-slate-300 mb-1>Custom Note / Alert Message</label>
-                    <input type=text id=modal-alert-message placeholder=e.g. Look for pullback entry on 5m! class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-sky-500>
-                </div>
-
-                <!-- Submit Button -->
-                <div class=pt-2>
-                    <button type=submit class=w-full py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white shadow-lg shadow-sky-500/30 transition-all>
-                        ⚡ Save & Activate Alert
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" id="cancel-alert-modal-btn" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 rounded-lg text-xs font-bold bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/20">
+                        ⚡ Activate Alert
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal: Settings (SMTP & API Keys) -->
-    <div id=settings-modal class=fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden>
-        <div class=bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden>
-            <div class=bg-slate-850 px-5 py-4 border-b border-slate-800 flex items-center justify-between>
-                <h3 class=font-bold text-base text-slate-100 flex items-center gap-2>
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150 transition-colors">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-850">
+                <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
                     <span>⚙️</span> Notification & API Settings
                 </h3>
-                <button id=close-settings-btn class=text-slate-400 hover:text-white text-lg>✕</button>
+                <button id="close-settings-modal-btn" class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg">&times;</button>
             </div>
-
-            <form id=settings-form class=p-5 space-y-4 max-h-[80vh] overflow-y-auto text-xs>
-                <div class=font-bold text-sky-400 border-b border-slate-800 pb-1>Email SMTP Configuration</div>
-                <div>
-                    <label class=block text-slate-400 mb-1>SMTP Host</label>
-                    <input type=text id=setting-smtp-host placeholder=smtp.gmail.com class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100>
-                </div>
-                <div class=grid grid-cols-2 gap-2>
-                    <div>
-                        <label class=block text-slate-400 mb-1>SMTP Port</label>
-                        <input type=number id=setting-smtp-port placeholder=587 class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100>
-                    </div>
-                    <div class=flex items-center pt-5>
-                        <label class=flex items-center gap-2 text-slate-200 cursor-pointer>
-                            <input type=checkbox id=setting-smtp-tls checked class=rounded bg-slate-950 border-slate-700 text-sky-500>
-                            <span>Use TLS</span>
-                        </label>
-                    </div>
-                </div>
-                <div>
-                    <label class=block text-slate-400 mb-1>SMTP Username / Email</label>
-                    <input type=email id=setting-smtp-user placeholder=you@gmail.com class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100>
-                </div>
-                <div>
-                    <label class=block text-slate-400 mb-1>SMTP Password / App Password</label>
-                    <input type=password id=setting-smtp-pass placeholder=•••••••• class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100>
-                </div>
-                <div>
-                    <label class=block text-slate-400 mb-1>Sender 'From' Email</label>
-                    <input type=email id=setting-smtp-from placeholder=alerts@yourdomain.com class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100>
+            
+            <div class="p-5 space-y-4 text-xs">
+                <div class="p-3 bg-sky-50 dark:bg-sky-950/60 rounded-xl border border-sky-200 dark:border-sky-800/80 text-sky-800 dark:text-sky-300">
+                    <div class="font-bold mb-1">📱 Android & Smartphone Push Alerts:</div>
+                    <p class="text-[11px] leading-relaxed opacity-90">
+                        Receive live alerts 24/7 on your smartphone even when your PC is turned off via Firebase Cloud Messaging & Web Push.
+                    </p>
                 </div>
 
-                <!-- Test Email Section -->
-                <div class=p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2>
-                    <label class=block text-slate-300 font-semibold>Test Email Delivery</label>
-                    <div class=flex gap-2>
-                        <input type=email id=settings-test-email-target placeholder=recipient@example.com class=flex-1 bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100 text-xs>
-                        <button type=button id=settings-test-email-btn class=bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded text-xs>Send Test</button>
-                    </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">TwelveData / Finnhub API Key (Optional)</label>
+                    <input type="password" id="settings-api-key" placeholder="Enter API key for live Forex feeds" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-xs">
                 </div>
 
-                <!-- Test Web Push Section -->
-                <div class=p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between>
-                    <div>
-                        <div class=font-semibold text-slate-300>Web Push Test</div>
-                        <div class=text-[10px] text-slate-500>Sends test push notification to browser</div>
-                    </div>
-                    <button type=button id=settings-test-push-btn class=bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-1.5 rounded text-xs>Test Push</button>
-                </div>
-
-                <div class=font-bold text-sky-400 border-b border-slate-800 pb-1 pt-2>Market Data API Keys (Optional)</div>
-                <div>
-                    <label class=block text-slate-400 mb-1>TwelveData API Key</label>
-                    <input type=text id=setting-twelvedata-key placeholder=Enter API key class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono text-xs>
-                </div>
-                <div>
-                    <label class=block text-slate-400 mb-1>Finnhub API Key</label>
-                    <input type=text id=setting-finnhub-key placeholder=Enter API key class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono text-xs>
-                </div>
-                <div>
-                    <label class=block text-slate-400 mb-1>Discord Webhook URL (Optional)</label>
-                    <input type=url id=setting-discord-webhook placeholder=https://discord.com/api/webhooks/... class=w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono text-xs>
-                </div>
-
-                <div class=pt-2>
-                    <button type=submit class=w-full py-2 rounded-xl font-bold bg-sky-600 hover:bg-sky-500 text-white shadow-md transition-all>
+                <div class="pt-2 flex justify-between items-center">
+                    <button id="send-test-push-btn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1">
+                        <span>🔔</span> Send Test Push
+                    </button>
+                    <button id="save-settings-btn" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-sky-500 hover:bg-sky-400 text-white">
                         Save Settings
                     </button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
     <!-- Scripts -->
-    <script src=/static/js/sw.js></script>
-    <script src=/static/js/notifications.js></script>
-    <script src=/static/js/chart.js></script>
-    <script src=/static/js/app.js></script>
+    <script src="/static/js/chart.js"></script>
+    <script src="/static/js/notifications.js"></script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>

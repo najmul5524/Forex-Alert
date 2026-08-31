@@ -9,14 +9,22 @@ class LogCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final formattedTime = DateFormat('HH:mm:ss • MMM dd').format(log.timestamp.toLocal());
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF131D31),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF1E293B)),
+        border: Border.all(color: Theme.of(context).dividerColor),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          )
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -24,7 +32,7 @@ class LogCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFF43F5E).withValues(alpha: 0.15),
+              color: const Color(0xFFF43F5E).withValues(alpha: isDark ? 0.15 : 0.1),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: const Color(0xFFF43F5E).withValues(alpha: 0.3)),
             ),
@@ -39,24 +47,24 @@ class LogCard extends StatelessWidget {
                   children: [
                     Text(
                       log.symbol,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         log.timeframe,
                         style: TextStyle(
                           fontSize: 10,
-                          color: Colors.blueGrey.shade300,
+                          color: isDark ? Colors.blueGrey.shade300 : Colors.blueGrey.shade700,
                         ),
                       ),
                     ),
@@ -65,7 +73,7 @@ class LogCard extends StatelessWidget {
                       formattedTime,
                       style: TextStyle(
                         fontSize: 10,
-                        color: Colors.blueGrey.shade500,
+                        color: isDark ? Colors.blueGrey.shade500 : Colors.blueGrey.shade500,
                       ),
                     ),
                   ],
@@ -75,17 +83,17 @@ class LogCard extends StatelessWidget {
                   log.conditionSummary,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.blueGrey.shade200,
+                    color: isDark ? Colors.blueGrey.shade200 : Colors.blueGrey.shade700,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Trigger Price: ${log.triggerPrice}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF38BDF8),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ],
