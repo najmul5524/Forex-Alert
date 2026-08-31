@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -74,6 +74,12 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            # Echo or ping/pong if needed
-    except WebSocketDisconnect:
+            try:
+                if data == "ping" or '"ping"' in data:
+                    await websocket.send_text("pong")
+            except Exception:
+                pass
+    except (WebSocketDisconnect, Exception) as e:
+        logger.debug(f"WebSocket client disconnected/error: {e}")
+    finally:
         ws_manager.disconnect(websocket)

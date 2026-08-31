@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 PORT="${PORT:-8000}"
 echo "Starting Forex Alert Engine on port $PORT..."
-exec gunicorn -w 1 -k uvicorn.workers.UvicornWorker app.main:app --bind "0.0.0.0:$PORT" --timeout 120
+exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT" --proxy-headers --forwarded-allow-ips="*" --ws-ping-interval 20 --ws-ping-timeout 30

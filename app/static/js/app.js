@@ -499,55 +499,79 @@ document.addEventListener("DOMContentLoaded", () => {
         },
 
         initWebSocket() {
+            if (this._wsPingInterval) clearInterval(this._wsPingInterval);
+            if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
+
             const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
             const wsUrl = `${protocol}//${window.location.host}/ws`;
-            this.ws = new WebSocket(wsUrl);
+            
+            try {
+                this.ws = new WebSocket(wsUrl);
 
-            this.ws.onopen = () => {
-                const dot = document.getElementById("ws-status-dot");
-                const text = document.getElementById("ws-status-text");
-                if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500";
-                if (text) text.innerText = "Live Stream Connected";
-            };
+                this.ws.onopen = () => {
+                    const dot = document.getElementById("ws-status-dot");
+                    const text = document.getElementById("ws-status-text");
+                    if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse";
+                    if (text) text.innerText = "Live Stream Connected";
 
-            this.ws.onclose = () => {
-                const dot = document.getElementById("ws-status-dot");
-                const text = document.getElementById("ws-status-text");
-                if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500";
-                if (text) text.innerText = "Reconnecting...";
-                setTimeout(() => this.initWebSocket(), 3000);
-            };
-
-            this.ws.onmessage = (event) => {
-                try {
-                    const msg = JSON.parse(event.data);
-                    if (msg.type === "tick") {
-                        const tick = msg.data;
-                        const cardPrice = document.getElementById(`rate-${tick.symbol}`);
-                        if (cardPrice) {
-                            cardPrice.innerText = tick.price.toFixed(cardPrice.innerText.includes(".") ? cardPrice.innerText.split(".")[1].length : 2);
+                    // Keep-alive heartbeat ping every 10 seconds to prevent Render proxy idle timeout
+                    this._wsPingInterval = setInterval(() => {
+                        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                            this.ws.send(JSON.stringify({ type: "ping" }));
                         }
+                    }, 10000);
+                };
 
-                        if (tick.symbol === this.symbol) {
-                            const curPriceEl = document.getElementById("current-symbol-price");
-                            if (curPriceEl) curPriceEl.innerText = tick.price.toFixed(curPriceEl.innerText.includes(".") ? curPriceEl.innerText.split(".")[1].length : 2);
-                        }
+                this.ws.onclose = () => {
+                    const dot = document.getElementById("ws-status-dot");
+                    const text = document.getElementById("ws-status-text");
+                    if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500";
+                    if (text) text.innerText = "Reconnecting...";
+                    if (this._wsPingInterval) clearInterval(this._wsPingInterval);
+                    this._wsReconnectTimeout = setTimeout(() => this.initWebSocket(), 2000);
+                };
 
-                        // Broadcast tick to all active chart panes
-                        for (const p of this.panes) {
-                            if (p.symbol === tick.symbol && p.chart) {
-                                p.chart.updateTick(tick.symbol, tick);
+                this.ws.onerror = (err) => {
+                    console.warn("WebSocket error, retrying...", err);
+                    try { this.ws.close(); } catch(e) {}
+                };
+
+                this.ws.onmessage = (event) => {
+                    try {
+                        if (event.data === "pong" || event.data === '{"type":"pong"}') return;
+
+                        const msg = JSON.parse(event.data);
+                        if (msg.type === "tick") {
+                            const tick = msg.data;
+                            const cardPrice = document.getElementById(`rate-${tick.symbol}`);
+                            if (cardPrice) {
+                                cardPrice.innerText = tick.price.toFixed(cardPrice.innerText.includes(".") ? cardPrice.innerText.split(".")[1].length : 2);
                             }
+
+                            if (tick.symbol === this.symbol) {
+                                const curPriceEl = document.getElementById("current-symbol-price");
+                                if (curPriceEl) curPriceEl.innerText = tick.price.toFixed(curPriceEl.innerText.includes(".") ? curPriceEl.innerText.split(".")[1].length : 2);
+                            }
+
+                            // Broadcast tick to all active chart panes
+                            for (const p of this.panes) {
+                                if (p.symbol === tick.symbol && p.chart) {
+                                    p.chart.updateTick(tick.symbol, tick);
+                                }
+                            }
+                        } else if (msg.type === "alert_triggered") {
+                            showToastNotification("🚨 Alert Triggered", msg.data.summary, "warning");
+                            this.loadAlerts();
+                            this.loadLogs();
                         }
-                    } else if (msg.type === "alert_triggered") {
-                        showToastNotification("🚨 Alert Triggered", msg.data.summary, "warning");
-                        this.loadAlerts();
-                        this.loadLogs();
+                    } catch (e) {
+                        console.error("WS parse error:", e);
                     }
-                } catch (e) {
-                    console.error("WS parse error:", e);
-                }
-            };
+                };
+            } catch (e) {
+                console.error("Failed to create WebSocket:", e);
+                this._wsReconnectTimeout = setTimeout(() => this.initWebSocket(), 3000);
+            }
         },
 
         updateOHLCVReadout(bar) {
