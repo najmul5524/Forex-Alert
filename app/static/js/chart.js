@@ -343,7 +343,7 @@ class TradingChart {
         if (!this.candleSeries) return;
 
         try {
-            const resp = await fetch(`/api/market/candles?symbol=${symbol}&timeframe=${timeframe}&limit=10000`);
+            const resp = await fetch(`/api/market/candles?symbol=${symbol}&timeframe=${timeframe}&limit=1500`);
             const data = await resp.json();
             if (data && Array.isArray(data) && data.length > 0) {
                 this.rawCandles = data;

@@ -156,7 +156,7 @@ class RealMarketDataService:
             sub_sec = parse_timeframe_seconds(sub_tf)
             sub_candles: List[Candle] = []
             
-            recent_hours = hourly_bars[-1500:]
+            recent_hours = hourly_bars[-200:]
             for h_bar in recent_hours:
                 h_start = (h_bar.time // 3600) * 3600
                 h_open = h_bar.open

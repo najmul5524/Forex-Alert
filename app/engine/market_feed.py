@@ -226,15 +226,18 @@ class MarketFeedEngine:
 
     async def _populate_real_history_worker(self):
         try:
+            await asyncio.sleep(4) # Let server bind port and start accepting traffic immediately
             from app.engine.real_market_data import real_market_data
             for s in SUPPORTED_SYMBOLS:
+                if not self.is_running:
+                    break
                 sym = s["symbol"]
                 try:
                     await real_market_data.populate_symbol_real_history(sym)
                     logger.info(f"Loaded authentic real market history for {sym}")
                 except Exception as e:
                     logger.debug(f"Could not load real history for {sym}: {e}")
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(1.0)
         except Exception as e:
             logger.error(f"Error in real history worker: {e}")
 
