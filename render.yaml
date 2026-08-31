@@ -3,7 +3,7 @@
     name: forex-alert-engine
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python3 run.py
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     plan: free
     autoDeploy: true
     envVars:
@@ -11,3 +11,5 @@
         value: 8000
       - key: DEFAULT_FEED_SOURCE
         value: simulation
+      - key: PYTHONPATH
+        value: /opt/render/project/src
