@@ -110,12 +110,17 @@ class MarketFeedEngine:
     async def _binance_stream_worker(self):
         crypto_pairs = ["btcusdt", "ethusdt", "solusdt"]
         stream_names = "/".join([f"{p}@ticker" for p in crypto_pairs])
-        url = f"wss://stream.binance.com:9443/ws/{stream_names}"
+        urls = [
+            f"wss://stream.binance.com:9443/ws/{stream_names}",
+            f"wss://stream.binance.us:9443/ws/{stream_names}"
+        ]
 
+        url_idx = 0
         while self.is_running:
+            url = urls[url_idx % len(urls)]
             try:
                 async with websockets.connect(url, ping_interval=20, ping_timeout=10) as ws:
-                    logger.info("Connected to Binance WebSocket market feed")
+                    logger.info(f"Connected to crypto market feed: {url}")
                     while self.is_running:
                         msg = await ws.recv()
                         data = json.loads(msg)
@@ -125,8 +130,13 @@ class MarketFeedEngine:
                         if sym and price_str:
                             await self.process_tick(sym, float(price_str), float(vol_str))
             except Exception as e:
-                logger.warning(f"Binance stream error (reconnecting in 5s): {e}")
-                await asyncio.sleep(5)
+                err_msg = str(e)
+                if "451" in err_msg or "rejected" in err_msg:
+                    url_idx += 1
+                    logger.info(f"Switching crypto feed host (reconnecting in 15s)...")
+                    await asyncio.sleep(15)
+                else:
+                    await asyncio.sleep(10)
 
     async def _forex_polling_worker(self):
         while self.is_running:
