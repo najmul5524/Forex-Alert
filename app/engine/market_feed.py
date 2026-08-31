@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import json
 import logging
 import random
@@ -17,15 +17,34 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 SUPPORTED_SYMBOLS = [
-    {"symbol": "EURUSD", "name": "EUR / USD", "type": "forex", "base_price": 1.0850, "decimals": 5},
-    {"symbol": "GBPUSD", "name": "GBP / USD", "type": "forex", "base_price": 1.2950, "decimals": 5},
-    {"symbol": "USDJPY", "name": "USD / JPY", "type": "forex", "base_price": 154.50, "decimals": 3},
-    {"symbol": "XAUUSD", "name": "Gold / USD", "type": "metals", "base_price": 2500.0, "decimals": 2},
-    {"symbol": "AUDUSD", "name": "AUD / USD", "type": "forex", "base_price": 0.6550, "decimals": 5},
-    {"symbol": "USDCAD", "name": "USD / CAD", "type": "forex", "base_price": 1.3650, "decimals": 5},
-    {"symbol": "BTCUSDT", "name": "Bitcoin / USDT", "type": "crypto", "base_price": 64500.0, "decimals": 2},
-    {"symbol": "ETHUSDT", "name": "Ethereum / USDT", "type": "crypto", "base_price": 2650.0, "decimals": 2},
-    {"symbol": "SOLUSDT", "name": "Solana / USDT", "type": "crypto", "base_price": 145.0, "decimals": 2}
+    # Major Forex Pairs
+    {"symbol": "EURUSD", "name": "EUR / USD", "type": "forex", "base_price": 1.0850, "decimals": 5, "spread_pips": 1.2},
+    {"symbol": "GBPUSD", "name": "GBP / USD", "type": "forex", "base_price": 1.2950, "decimals": 5, "spread_pips": 1.5},
+    {"symbol": "USDJPY", "name": "USD / JPY", "type": "forex", "base_price": 154.50, "decimals": 3, "spread_pips": 1.4},
+    {"symbol": "AUDUSD", "name": "AUD / USD", "type": "forex", "base_price": 0.6550, "decimals": 5, "spread_pips": 1.6},
+    {"symbol": "USDCAD", "name": "USD / CAD", "type": "forex", "base_price": 1.3650, "decimals": 5, "spread_pips": 1.8},
+    {"symbol": "USDCHF", "name": "USD / CHF", "type": "forex", "base_price": 0.8920, "decimals": 5, "spread_pips": 1.7},
+    {"symbol": "NZDUSD", "name": "NZD / USD", "type": "forex", "base_price": 0.5980, "decimals": 5, "spread_pips": 2.0},
+    {"symbol": "EURGBP", "name": "EUR / GBP", "type": "forex", "base_price": 0.8380, "decimals": 5, "spread_pips": 1.5},
+    {"symbol": "EURJPY", "name": "EUR / JPY", "type": "forex", "base_price": 167.60, "decimals": 3, "spread_pips": 1.9},
+    {"symbol": "GBPJPY", "name": "GBP / JPY", "type": "forex", "base_price": 200.10, "decimals": 3, "spread_pips": 2.2},
+
+    # Metals & Energy
+    {"symbol": "XAUUSD", "name": "Gold / USD", "type": "metals", "base_price": 2500.0, "decimals": 2, "spread_pips": 2.5},
+    {"symbol": "XAGUSD", "name": "Silver / USD", "type": "metals", "base_price": 29.50, "decimals": 3, "spread_pips": 1.8},
+    {"symbol": "USOIL", "name": "Crude Oil WTI", "type": "energy", "base_price": 74.20, "decimals": 2, "spread_pips": 3.0},
+
+    # Indices
+    {"symbol": "SPX500", "name": "S&P 500 Index", "type": "indices", "base_price": 5600.0, "decimals": 2, "spread_pips": 4.0},
+    {"symbol": "NAS100", "name": "Nasdaq 100 Index", "type": "indices", "base_price": 19500.0, "decimals": 2, "spread_pips": 5.0},
+    {"symbol": "US30", "name": "Dow Jones 30", "type": "indices", "base_price": 41200.0, "decimals": 2, "spread_pips": 6.0},
+
+    # Crypto Assets
+    {"symbol": "BTCUSDT", "name": "Bitcoin / USDT", "type": "crypto", "base_price": 64500.0, "decimals": 2, "spread_pips": 1.0},
+    {"symbol": "ETHUSDT", "name": "Ethereum / USDT", "type": "crypto", "base_price": 2650.0, "decimals": 2, "spread_pips": 1.0},
+    {"symbol": "SOLUSDT", "name": "Solana / USDT", "type": "crypto", "base_price": 145.0, "decimals": 2, "spread_pips": 0.5},
+    {"symbol": "BNBUSDT", "name": "BNB / USDT", "type": "crypto", "base_price": 540.0, "decimals": 2, "spread_pips": 0.5},
+    {"symbol": "XRPUSDT", "name": "XRP / USDT", "type": "crypto", "base_price": 0.5850, "decimals": 4, "spread_pips": 0.8}
 ]
 
 class MarketFeedEngine:
@@ -34,6 +53,7 @@ class MarketFeedEngine:
         self.tasks: List[asyncio.Task] = []
         self.active_symbols: Set[str] = {s["symbol"] for s in SUPPORTED_SYMBOLS}
         self.ws_broadcast_callback = None
+        self._symbol_map = {s["symbol"]: s for s in SUPPORTED_SYMBOLS}
 
     def set_broadcast_callback(self, cb):
         self.ws_broadcast_callback = cb
@@ -41,6 +61,13 @@ class MarketFeedEngine:
     async def process_tick(self, symbol: str, price: float, volume: float = 1.0):
         sym = symbol.upper().replace("/", "").replace("-", "")
         store, events = candle_manager.update_tick(sym, price, volume)
+
+        s_meta = self._symbol_map.get(sym, {"decimals": 5, "spread_pips": 1.5, "type": "forex"})
+        dec = s_meta.get("decimals", 5)
+        pip_unit = 0.0001 if s_meta.get("type") == "forex" and dec >= 4 else (0.01 if dec <= 3 else 0.0001)
+        spread_val = round((s_meta.get("spread_pips", 1.5) * pip_unit), dec)
+        bid = round(price - (spread_val / 2.0), dec)
+        ask = round(price + (spread_val / 2.0), dec)
 
         if self.ws_broadcast_callback:
             try:
@@ -50,6 +77,10 @@ class MarketFeedEngine:
                     "data": {
                         "symbol": sym,
                         "price": price,
+                        "bid": bid,
+                        "ask": ask,
+                        "spread": spread_val,
+                        "decimals": dec,
                         "timestamp": int(time.time()),
                         "candle_1m": latest_1m.to_dict() if latest_1m else None
                     }

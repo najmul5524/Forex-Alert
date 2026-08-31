@@ -10,6 +10,10 @@ class TradingChart {
         this.isDarkMode = true;
         this.candlesData = [];
 
+        this.chartType = 'candle'; // candle, bar, line, area, heikin_ashi, baseline
+        this.timezoneOffsetSeconds = 0; // UTC default
+        this.rawCandles = [];
+
         // Active dynamic indicators: Array of { id, type, name, params, color, visible, seriesList: [] }
         this.indicators = [];
         this.indicatorCounter = 0;
@@ -101,15 +105,7 @@ class TradingChart {
                 },
             });
 
-            // Main candlestick series
-            this.candleSeries = this.chart.addCandlestickSeries({
-                upColor: '#10b981',
-                downColor: '#f43f5e',
-                borderUpColor: '#10b981',
-                borderDownColor: '#f43f5e',
-                wickUpColor: '#10b981',
-                wickDownColor: '#f43f5e',
-            });
+            this.createMainSeries(this.chartType);
 
             // Volume histogram
             this.volumeSeries = this.chart.addHistogramSeries({
@@ -124,7 +120,7 @@ class TradingChart {
                 },
             });
 
-            // Setup crosshair move for OHLCV tracking
+            // Setup crosshair move for OHLCV tracking with timezone formatting
             this.chart.subscribeCrosshairMove((param) => {
                 if (!param || !param.time || !param.seriesPrices) {
                     if (this.onCrosshairMoveCallback) this.onCrosshairMoveCallback(null);
@@ -135,10 +131,10 @@ class TradingChart {
                 if (candle && this.onCrosshairMoveCallback) {
                     this.onCrosshairMoveCallback({
                         time: param.time,
-                        open: candle.open,
-                        high: candle.high,
-                        low: candle.low,
-                        close: candle.close,
+                        open: candle.open !== undefined ? candle.open : candle.value,
+                        high: candle.high !== undefined ? candle.high : candle.value,
+                        low: candle.low !== undefined ? candle.low : candle.value,
+                        close: candle.close !== undefined ? candle.close : candle.value,
                         volume: volume || 0
                     });
                 }
@@ -170,12 +166,70 @@ class TradingChart {
                     this.resizeDrawingCanvas();
                 }
             });
-
-            // Add default starter indicators (EMA 20 & EMA 50)
-            this.addIndicator('ema', { period: 20, source: 'close' }, '#38bdf8');
-            this.addIndicator('ema', { period: 50, source: 'close' }, '#fbbf24');
         } catch (e) {
             console.error("TradingChart init failed:", e);
+        }
+    }
+
+    createMainSeries(type = 'candle') {
+        if (!this.chart) return;
+        if (this.candleSeries) {
+            try { this.chart.removeSeries(this.candleSeries); } catch(e) {}
+            this.candleSeries = null;
+        }
+
+        const isDark = this.isDarkMode;
+        if (type === 'bar') {
+            this.candleSeries = this.chart.addBarSeries({
+                upColor: '#10b981',
+                downColor: '#f43f5e',
+            });
+        } else if (type === 'line') {
+            this.candleSeries = this.chart.addLineSeries({
+                color: '#38bdf8',
+                lineWidth: 2,
+            });
+        } else if (type === 'area') {
+            this.candleSeries = this.chart.addAreaSeries({
+                topColor: isDark ? 'rgba(56, 189, 248, 0.4)' : 'rgba(14, 165, 233, 0.3)',
+                bottomColor: isDark ? 'rgba(56, 189, 248, 0.0)' : 'rgba(14, 165, 233, 0.0)',
+                lineColor: '#38bdf8',
+                lineWidth: 2,
+            });
+        } else if (type === 'baseline') {
+            this.candleSeries = this.chart.addBaselineSeries({
+                topLineColor: '#10b981',
+                topFillColor1: 'rgba(16, 185, 129, 0.28)',
+                topFillColor2: 'rgba(16, 185, 129, 0.05)',
+                bottomLineColor: '#f43f5e',
+                bottomFillColor1: 'rgba(244, 63, 94, 0.05)',
+                bottomFillColor2: 'rgba(244, 63, 94, 0.28)',
+            });
+        } else {
+            // Standard Candlestick or Heikin-Ashi
+            this.candleSeries = this.chart.addCandlestickSeries({
+                upColor: '#10b981',
+                downColor: '#f43f5e',
+                borderUpColor: '#10b981',
+                borderDownColor: '#f43f5e',
+                wickUpColor: '#10b981',
+                wickDownColor: '#f43f5e',
+            });
+        }
+    }
+
+    setChartType(type) {
+        this.chartType = type;
+        this.createMainSeries(type);
+        if (this.rawCandles && this.rawCandles.length > 0) {
+            this.renderCandlesData(this.rawCandles);
+        }
+    }
+
+    setTimezone(offsetHours) {
+        this.timezoneOffsetSeconds = offsetHours * 3600;
+        if (this.rawCandles && this.rawCandles.length > 0) {
+            this.renderCandlesData(this.rawCandles);
         }
     }
 
@@ -225,37 +279,9 @@ class TradingChart {
             const resp = await fetch(`/api/market/candles?symbol=${symbol}&timeframe=${timeframe}&limit=1200`);
             const data = await resp.json();
             if (data && Array.isArray(data) && data.length > 0) {
-                this.candlesData = data;
-                const candleData = data.map(c => ({
-                    time: c.time,
-                    open: c.open,
-                    high: c.high,
-                    low: c.low,
-                    close: c.close,
-                }));
-                const volData = data.map(c => ({
-                    time: c.time,
-                    value: c.volume || 1.0,
-                    color: c.close >= c.open ? (this.isDarkMode ? '#064e3b88' : '#a7f3d088') : (this.isDarkMode ? '#88133788' : '#fecdd388')
-                }));
-
-                if (this.candleSeries) this.candleSeries.setData(candleData);
-                if (this.volumeSeries) this.volumeSeries.setData(volData);
+                this.rawCandles = data;
+                this.renderCandlesData(data);
                 if (this.chart) this.chart.timeScale().fitContent();
-
-                // Initialize current forming bar from the last candle
-                if (candleData.length > 0) {
-                    const last = candleData[candleData.length - 1];
-                    const lastVol = volData[volData.length - 1];
-                    this.currentCandle = {
-                        time: last.time,
-                        open: last.open,
-                        high: last.high,
-                        low: last.low,
-                        close: last.close,
-                        volume: lastVol?.value || 1.0
-                    };
-                }
 
                 // Refresh all active indicators
                 await this.refreshAllIndicators();
@@ -264,6 +290,69 @@ class TradingChart {
         } catch (e) {
             console.error('Failed to load candles:', e);
         }
+    }
+
+    renderCandlesData(data) {
+        if (!data || data.length === 0 || !this.candleSeries) return;
+
+        const tzOffset = this.timezoneOffsetSeconds || 0;
+        let formattedData = [];
+
+        if (this.chartType === 'heikin_ashi') {
+            let haOpen = (data[0].open + data[0].close) / 2.0;
+            formattedData = data.map((c, idx) => {
+                const haClose = (c.open + c.high + c.low + c.close) / 4.0;
+                if (idx > 0) {
+                    haOpen = (haOpen + formattedData[idx - 1].close) / 2.0;
+                }
+                const haHigh = Math.max(c.high, haOpen, haClose);
+                const haLow = Math.min(c.low, haOpen, haClose);
+                return {
+                    time: c.time + tzOffset,
+                    open: haOpen,
+                    high: haHigh,
+                    low: haLow,
+                    close: haClose
+                };
+            });
+        } else if (['line', 'area', 'baseline'].includes(this.chartType)) {
+            formattedData = data.map(c => ({
+                time: c.time + tzOffset,
+                value: c.close
+            }));
+        } else {
+            // Standard Candlestick or OHLC Bars
+            formattedData = data.map(c => ({
+                time: c.time + tzOffset,
+                open: c.open,
+                high: c.high,
+                low: c.low,
+                close: c.close
+            }));
+        }
+
+        const volData = data.map(c => ({
+            time: c.time + tzOffset,
+            value: c.volume || 1.0,
+            color: c.close >= c.open 
+                ? (this.isDarkMode ? '#064e3b88' : '#a7f3d088') 
+                : (this.isDarkMode ? '#88133788' : '#fecdd388')
+        }));
+
+        this.candleSeries.setData(formattedData);
+        if (this.volumeSeries) this.volumeSeries.setData(volData);
+
+        // Track last forming candle
+        const last = data[data.length - 1];
+        const lastVol = volData[volData.length - 1];
+        this.currentCandle = {
+            time: last.time,
+            open: last.open,
+            high: last.high,
+            low: last.low,
+            close: last.close,
+            volume: lastVol?.value || 1.0
+        };
     }
 
     parseTfSeconds(tfStr) {
@@ -435,20 +524,37 @@ class TradingChart {
 
         const p = ind.params;
         try {
-            if (ind.type in { ema: 1, sma: 1, wma: 1, rsi: 1, atr: 1 }) {
+            if (ind.type in { ema: 1, sma: 1, wma: 1, rsi: 1, atr: 1, hma: 1, vwap: 1, supertrend: 1 }) {
                 let url = `/api/market/indicators?symbol=${this.currentSymbol}&timeframe=${this.currentTimeframe}&ind_type=${ind.type}&period=${p.period || 14}&source=${p.source || 'close'}`;
                 const resp = await fetch(url);
                 const data = await resp.json();
                 if (data && Array.isArray(data) && data.length > 0) {
                     const lineSeries = this.chart.addLineSeries({
                         color: ind.color,
-                        lineWidth: 1.5,
+                        lineWidth: ind.type === 'supertrend' ? 2 : 1.5,
                         title: ind.name,
                         priceLineVisible: false,
                     });
                     lineSeries.setData(data);
                     ind.seriesList.push(lineSeries);
                     ind.currentValue = data[data.length - 1].value;
+                }
+            } else if (ind.type in { stochastic: 1, stoch: 1 }) {
+                for (const out of ['k', 'd']) {
+                    let url = `/api/market/indicators?symbol=${this.currentSymbol}&timeframe=${this.currentTimeframe}&ind_type=stochastic&k_period=${p.k_period || 14}&d_period=${p.d_period || 3}&smooth_k=${p.smooth_k || 3}&output=${out}`;
+                    const resp = await fetch(url);
+                    const data = await resp.json();
+                    if (data && Array.isArray(data) && data.length > 0) {
+                        const lineSeries = this.chart.addLineSeries({
+                            color: out === 'k' ? ind.color : '#f43f5e',
+                            lineWidth: 1.5,
+                            title: `Stoch ${out.toUpperCase()}`,
+                            priceLineVisible: false,
+                        });
+                        lineSeries.setData(data);
+                        ind.seriesList.push(lineSeries);
+                        if (out === 'k') ind.currentValue = data[data.length - 1].value;
+                    }
                 }
             } else if (ind.type in { bollinger: 1, bb: 1 }) {
                 // Fetch Upper, Middle, Lower
@@ -666,6 +772,49 @@ class TradingChart {
                 ctx.fillText(`Δ Price Range`, minX + 8, minY + 18);
                 ctx.restore();
             }
+        }
+
+        // Render TradingView-style price scale countdown badge
+        if (this.currentCandle && this.candleSeries) {
+            try {
+                const y = this.candleSeries.priceToCoordinate(this.currentCandle.close);
+                if (y !== null && y !== undefined && y > 15 && y < this.overlayCanvas.height - 25) {
+                    const tfSec = this.parseTfSeconds(this.currentTimeframe);
+                    const now = Math.floor(Date.now() / 1000);
+                    const elapsed = now % tfSec;
+                    const remaining = Math.max(0, tfSec - elapsed);
+                    const hrs = Math.floor(remaining / 3600);
+                    const mins = Math.floor((remaining % 3600) / 60);
+                    const secs = remaining % 60;
+                    const timeStr = hrs > 0 
+                        ? `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+                        : `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+                    ctx.save();
+                    ctx.fillStyle = this.isDarkMode ? '#0f172a' : '#ffffff';
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.lineWidth = 1;
+                    const badgeW = 54;
+                    const badgeH = 16;
+                    const badgeX = this.overlayCanvas.width - badgeW - 3;
+                    const badgeY = y + 14;
+
+                    ctx.beginPath();
+                    if (ctx.roundRect) {
+                        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
+                    } else {
+                        ctx.rect(badgeX, badgeY, badgeW, badgeH);
+                    }
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.font = 'bold 10px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(timeStr, badgeX + (badgeW / 2), badgeY + 12);
+                    ctx.restore();
+                }
+            } catch (err) {}
         }
     }
 

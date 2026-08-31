@@ -26,7 +26,7 @@
     <!-- Custom Styles & Favicon -->
     <link rel="icon" type="image/png" href="/static/icon.png">
     <link rel="apple-touch-icon" href="/static/icon.png">
-    <link rel="stylesheet" href="/static/css/styles.css?v=2.5.0">
+    <link rel="stylesheet" href="/static/css/styles.css?v=2.6.0">
     <link rel="manifest" href="/static/manifest.json">
     <script>
         window.VAPID_PUBLIC_KEY = {{ vapid_public_key | tojson }};
@@ -104,15 +104,25 @@
             <button id="open-alert-modal-btn" class="px-4 py-2 rounded-lg text-xs font-bold bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white shadow-md shadow-sky-500/25 transition-all flex items-center gap-1.5 active:scale-95">
                 <span>+</span> Create Alert
             </button>
-        </div>
-    </header>
-
-    <!-- TRADINGVIEW SUB-HEADER: TIMEFRAMES, INDICATORS & OHLCV READOUT -->
+         <!-- TRADINGVIEW SUB-HEADER: TIMEFRAMES, CHART TYPES, INDICATORS & OHLCV READOUT -->
     <div class="bg-slate-100 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800 px-4 py-1.5 flex flex-wrap items-center justify-between gap-3 text-xs transition-colors">
-        <div class="flex items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-2.5 flex-wrap">
             
+            <!-- Selectable Chart Types (TradingView style) -->
+            <div class="flex items-center bg-white dark:bg-slate-950 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 text-xs shadow-sm">
+                <span class="text-slate-400 mr-1 text-[11px]">Type:</span>
+                <select id="chart-type-select" class="bg-transparent font-bold text-slate-800 dark:text-slate-200 cursor-pointer focus:outline-none text-xs">
+                    <option value="candle">🕯️ Candles</option>
+                    <option value="bar">📊 Bars</option>
+                    <option value="line">📈 Line</option>
+                    <option value="area">🌊 Area</option>
+                    <option value="heikin_ashi">🎋 Heikin-Ashi</option>
+                    <option value="baseline">📉 Baseline</option>
+                </select>
+            </div>
+
             <!-- Timeframe Selector with Presets & Custom Input -->
-            <div class="flex items-center bg-white dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
+            <div class="flex items-center bg-white dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
                 <button class="tf-btn px-2 py-0.5 rounded-md font-semibold bg-sky-600 text-white" data-tf="1m">1m</button>
                 <button class="tf-btn px-2 py-0.5 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="3m">3m</button>
                 <button class="tf-btn px-2 py-0.5 rounded-md font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-tf="5m">5m</button>
@@ -128,12 +138,12 @@
             </div>
 
             <!-- Indicators Modal Button -->
-            <button id="open-indicators-modal-btn" class="px-3 py-1 rounded-lg font-bold bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 transition-all active:scale-95">
+            <button id="open-indicators-modal-btn" class="px-3 py-1 rounded-lg font-bold bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 transition-all active:scale-95 shadow-sm">
                 <span class="font-mono text-xs font-black">fx</span> Indicators
             </button>
 
             <!-- Multi-Chart Layout Switcher (TradingView style) -->
-            <div class="flex items-center bg-white dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
+            <div class="flex items-center bg-white dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
                 <button class="chart-layout-btn px-2 py-0.5 rounded-md font-bold text-xs bg-sky-600 text-white" data-layout="1" title="Single Full Chart">
                     🔲 1
                 </button>
@@ -152,14 +162,14 @@
             </div>
 
             <!-- Sync Symbol across Panes Toggle -->
-            <label class="flex items-center gap-1.5 cursor-pointer text-slate-600 dark:text-slate-300 font-semibold px-2 py-1 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] select-none hover:bg-slate-50 dark:hover:bg-slate-900" title="When enabled, selecting a symbol changes all chart windows simultaneously while keeping separate timeframes">
+            <label class="flex items-center gap-1.5 cursor-pointer text-slate-600 dark:text-slate-300 font-semibold px-2 py-1 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] select-none hover:bg-slate-50 dark:hover:bg-slate-900 shadow-sm" title="When enabled, selecting a symbol changes all chart windows simultaneously while keeping separate timeframes">
                 <input type="checkbox" id="sync-symbols-toggle" checked class="rounded text-sky-600 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700">
                 <span>🔗 Sync Symbol</span>
             </label>
         </div>
 
         <!-- OHLCV Live Header Readout -->
-        <div id="ohlcv-readout" class="hidden md:flex items-center gap-3 text-[11px] font-mono text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-950 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
+        <div id="ohlcv-readout" class="hidden md:flex items-center gap-3 text-[11px] font-mono text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-950 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
             <span>O: <strong class="text-slate-900 dark:text-white" id="ohlcv-o">--</strong></span>
             <span>H: <strong class="text-emerald-600 dark:text-emerald-400" id="ohlcv-h">--</strong></span>
             <span>L: <strong class="text-rose-600 dark:text-rose-400" id="ohlcv-l">--</strong></span>
@@ -169,7 +179,7 @@
     </div>
 
     <!-- MAIN TRADINGVIEW WORKSTATION LAYOUT -->
-    <main class="flex-1 flex overflow-hidden min-h-0">
+    <main class="flex-1 flex overflow-hidden min-h-0 relative">
         
         <!-- LEFT DRAWING TOOLS SIDEBAR (TradingView Style) -->
         <aside class="w-12 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col items-center py-3 gap-2 shrink-0 z-30 transition-colors">
@@ -179,25 +189,41 @@
             <button class="draw-tool-btn p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-sky-100 text-sm transition-all" data-tool="trendline" title="Trend Line (Click 2 points)">
                 📈
             </button>
-            <button class="draw-tool-btn p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-sky-100 text-sm transition-all" data-tool="horizontal_ray" title="Horizontal Price Ray / Support & Resistance">
+            <button class="draw-tool-btn p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-sky-100 text-sm transition-all" data-tool="horizontal_ray" title="Horizontal Ray (Click on price level)">
                 ➖
             </button>
-            <button class="draw-tool-btn p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-sky-100 text-sm transition-all" data-tool="fibonacci" title="Fibonacci Retracement">
-                📊
+            <button class="draw-tool-btn p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-sky-100 text-sm transition-all" data-tool="fibonacci" title="Fibonacci Retracement (Drag from Swing Low to High)">
+                🔱
             </button>
-            <button class="draw-tool-btn p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-sky-100 text-sm transition-all" data-tool="measure" title="Measure Price Range & Delta">
+            <button class="draw-tool-btn p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-sky-100 text-sm transition-all" data-tool="measure" title="Price Range / Measure Box (Click & Drag)">
                 📐
             </button>
-            <div class="w-6 h-px bg-slate-200 dark:bg-slate-800 my-1"></div>
+            <div class="w-6 h-[1px] bg-slate-200 dark:border-slate-800 my-1"></div>
             <button class="draw-tool-btn p-2 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-sm transition-all" data-tool="clear" title="Clear All Drawings">
                 🗑️
             </button>
         </aside>
 
-        <!-- CENTER: DYNAMIC MULTI-CHART GRID CONTAINER -->
-        <section class="flex-1 flex flex-col relative bg-slate-100 dark:bg-slate-950 min-w-0 p-1.5 gap-1.5 overflow-hidden">
-            <div id="charts-grid-container" class="w-full h-full grid grid-cols-1 grid-rows-1 gap-1.5">
+        <!-- CENTER: MULTI-WINDOW CHARTS GRID AREA -->
+        <section class="flex-1 bg-slate-100 dark:bg-slate-950 relative flex flex-col min-w-0 min-h-0 p-1.5 overflow-hidden">
+            
+            <!-- Grid Container for 1, 2, 3, or 4 charts -->
+            <div id="charts-grid-container" class="w-full h-full grid grid-cols-1 grid-rows-1 gap-1.5 min-h-0">
                 <!-- Dynamically populated chart panes -->
+            </div>
+
+            <!-- Bottom-Right Timezone Selector Badge (TradingView Style) -->
+            <div class="absolute bottom-3 right-3 z-30 flex items-center bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-md text-xs">
+                <span class="text-slate-400 mr-1.5 text-[11px]">🌍</span>
+                <select id="chart-timezone-select" class="bg-transparent font-bold text-slate-800 dark:text-slate-200 cursor-pointer focus:outline-none text-[11px]">
+                    <option value="0">UTC (London / +0)</option>
+                    <option value="-5">UTC-5 (New York / EDT)</option>
+                    <option value="1">UTC+1 (Frankfurt / CET)</option>
+                    <option value="4">UTC+4 (Dubai / GST)</option>
+                    <option value="6" selected>UTC+6 (Dhaka / BST)</option>
+                    <option value="8">UTC+8 (Singapore / HKT)</option>
+                    <option value="9">UTC+9 (Tokyo / JST)</option>
+                </select>
             </div>
         </section>
 
@@ -218,14 +244,17 @@
                 </div>
             </div>
 
-            <!-- Instruments List -->
-            <div class="bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-800 p-2.5 shadow-sm">
-                <div class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 flex items-center justify-between">
-                    <span>Instruments</span>
-                    <span class="text-[10px] text-slate-400">Click to Chart</span>
+            <!-- Instruments Watchlist Table with Bid, Ask, Spread -->
+            <div class="bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-800 p-2.5 shadow-sm flex flex-col max-h-72">
+                <div class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
+                    <span class="flex items-center gap-1">
+                        <span>📋 Watchlist</span>
+                    </span>
+                    <span class="text-[10px] text-slate-400 font-mono">Bid / Ask / Spr</span>
                 </div>
-                <div class="grid grid-cols-3 gap-1.5" id="symbols-grid">
-                    <!-- Dynamic symbol buttons -->
+                
+                <div class="flex-1 overflow-y-auto pr-1 space-y-1" id="symbols-grid">
+                    <!-- Dynamic symbol cards with Bid & Ask -->
                 </div>
             </div>
 
@@ -379,6 +408,38 @@
                             <div class="text-[11px] text-slate-500">Market volatility metric</div>
                         </div>
                         <button class="add-ind-btn px-2.5 py-1 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white text-xs" data-type="atr">+ Add</button>
+                    </div>
+
+                    <div class="indicator-item p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-all" data-type="hma">
+                        <div>
+                            <div class="font-bold text-slate-800 dark:text-slate-200">Hull Moving Average (HMA)</div>
+                            <div class="text-[11px] text-slate-500">Fast, responsive zero-lag moving average</div>
+                        </div>
+                        <button class="add-ind-btn px-2.5 py-1 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white text-xs" data-type="hma">+ Add</button>
+                    </div>
+
+                    <div class="indicator-item p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-all" data-type="vwap">
+                        <div>
+                            <div class="font-bold text-slate-800 dark:text-slate-200">Volume Weighted Average Price (VWAP)</div>
+                            <div class="text-[11px] text-slate-500">Institutional benchmark tracking intraday volume</div>
+                        </div>
+                        <button class="add-ind-btn px-2.5 py-1 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white text-xs" data-type="vwap">+ Add</button>
+                    </div>
+
+                    <div class="indicator-item p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-all" data-type="stochastic">
+                        <div>
+                            <div class="font-bold text-slate-800 dark:text-slate-200">Stochastic Oscillator (%K, %D)</div>
+                            <div class="text-[11px] text-slate-500">Momentum indicator comparing closing price to price range</div>
+                        </div>
+                        <button class="add-ind-btn px-2.5 py-1 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white text-xs" data-type="stochastic">+ Add</button>
+                    </div>
+
+                    <div class="indicator-item p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-all" data-type="supertrend">
+                        <div>
+                            <div class="font-bold text-slate-800 dark:text-slate-200">SuperTrend (ATR Trailing Stop)</div>
+                            <div class="text-[11px] text-slate-500">Dynamic trend indicator with buy/sell breakout bands</div>
+                        </div>
+                        <button class="add-ind-btn px-2.5 py-1 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white text-xs" data-type="supertrend">+ Add</button>
                     </div>
                 </div>
             </div>
@@ -619,8 +680,8 @@
     </div>
 
     <!-- Scripts with Cache Busting -->
-    <script src="/static/js/chart.js?v=2.5.0"></script>
-    <script src="/static/js/notifications.js?v=2.5.0"></script>
-    <script src="/static/js/app.js?v=2.5.0"></script>
+    <script src="/static/js/chart.js?v=2.6.0"></script>
+    <script src="/static/js/notifications.js?v=2.6.0"></script>
+    <script src="/static/js/app.js?v=2.6.0"></script>
 </body>
 </html>

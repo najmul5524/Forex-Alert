@@ -235,24 +235,56 @@ document.addEventListener("DOMContentLoaded", () => {
 
             container.innerHTML = this.symbols.map(s => {
                 const isActive = s.symbol === this.symbol;
+                const dec = s.decimals || 5;
+                const pipUnit = (s.type === 'forex' && dec >= 4) ? 0.0001 : (dec <= 3 ? 0.01 : 0.0001);
+                const sprPips = s.spread_pips || 1.5;
+                const sprVal = (sprPips * pipUnit);
+                const bid = s.bid || (s.current_price - (sprVal / 2));
+                const ask = s.ask || (s.current_price + (sprVal / 2));
+
                 return `
-                <button class="symbol-btn p-2 rounded-xl border text-left transition-all ${
+                <div class="symbol-card p-2 rounded-xl border transition-all cursor-pointer select-none flex items-center justify-between text-xs ${
                     isActive 
-                        ? 'bg-sky-50 dark:bg-sky-950/80 border-sky-500 text-sky-600 dark:text-sky-400 shadow-sm' 
-                        : 'bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200'
+                        ? 'bg-sky-50 dark:bg-sky-950/80 border-sky-500 shadow-sm' 
+                        : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 border-slate-200 dark:border-slate-800'
                 }" data-symbol="${s.symbol}">
-                    <div class="font-bold text-xs leading-tight">${s.symbol}</div>
-                    <div class="text-[10px] text-slate-500 dark:text-slate-400 truncate">${s.name}</div>
-                    <div class="font-mono font-bold text-xs mt-1 text-sky-600 dark:text-sky-400" id="rate-${s.symbol}">
-                        ${s.current_price.toFixed(s.decimals)}
+                    <div class="min-w-0 pr-2">
+                        <div class="font-bold text-slate-900 dark:text-white leading-tight flex items-center gap-1.5">
+                            <span>${s.symbol}</span>
+                            <span class="text-[9px] px-1 py-0.2 rounded font-normal uppercase ${
+                                s.type === 'crypto' ? 'bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400' :
+                                s.type === 'metals' ? 'bg-yellow-100 dark:bg-yellow-950 text-yellow-600 dark:text-yellow-400' :
+                                s.type === 'indices' ? 'bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400' :
+                                'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                            }">${s.type || 'fx'}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400 truncate max-w-[90px]">${s.name}</div>
                     </div>
-                </button>
+
+                    <div class="text-right flex items-center gap-2 font-mono">
+                        <div>
+                            <div class="text-[9px] text-slate-400">BID</div>
+                            <div class="font-bold text-slate-800 dark:text-slate-200 transition-colors" id="bid-${s.symbol}">
+                                ${bid.toFixed(dec)}
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-[9px] text-slate-400">ASK</div>
+                            <div class="font-bold text-sky-600 dark:text-sky-400 transition-colors" id="ask-${s.symbol}">
+                                ${ask.toFixed(dec)}
+                            </div>
+                        </div>
+                        <div class="text-[10px] text-slate-400 font-normal pl-1 border-l border-slate-200 dark:border-slate-800">
+                            <span id="spr-${s.symbol}">${sprPips.toFixed(1)}</span>p
+                        </div>
+                    </div>
+                </div>
                 `;
             }).join("");
 
-            container.querySelectorAll(".symbol-btn").forEach(btn => {
-                btn.addEventListener("click", () => {
-                    this.changeSymbol(btn.dataset.symbol);
+            container.querySelectorAll(".symbol-card").forEach(card => {
+                card.addEventListener("click", () => {
+                    this.changeSymbol(card.dataset.symbol);
                 });
             });
 
@@ -358,6 +390,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         ? `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
                         : `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
                     p.timerEl.textContent = `⏱️ ${str}`;
+                    if (p.chart.redrawDrawings) {
+                        p.chart.redrawDrawings();
+                    }
                 }
             }
         },
@@ -548,14 +583,34 @@ document.addEventListener("DOMContentLoaded", () => {
                         const msg = JSON.parse(event.data);
                         if (msg.type === "tick") {
                             const tick = msg.data;
-                            const cardPrice = document.getElementById(`rate-${tick.symbol}`);
-                            if (cardPrice) {
-                                cardPrice.innerText = tick.price.toFixed(cardPrice.innerText.includes(".") ? cardPrice.innerText.split(".")[1].length : 2);
+                            const dec = tick.decimals || 5;
+                            const bid = tick.bid !== undefined ? tick.bid : tick.price;
+                            const ask = tick.ask !== undefined ? tick.ask : tick.price;
+
+                            const bidEl = document.getElementById(`bid-${tick.symbol}`);
+                            const askEl = document.getElementById(`ask-${tick.symbol}`);
+                            const sprEl = document.getElementById(`spr-${tick.symbol}`);
+                            
+                            if (bidEl) {
+                                const prev = parseFloat(bidEl.innerText) || 0;
+                                bidEl.innerText = bid.toFixed(dec);
+                                if (bid > prev) {
+                                    bidEl.className = "font-bold text-emerald-500 transition-colors";
+                                } else if (bid < prev) {
+                                    bidEl.className = "font-bold text-rose-500 transition-colors";
+                                }
+                            }
+                            if (askEl) {
+                                askEl.innerText = ask.toFixed(dec);
+                            }
+                            if (sprEl && tick.spread !== undefined) {
+                                const pipUnit = dec >= 4 ? 0.0001 : (dec <= 3 ? 0.01 : 0.0001);
+                                sprEl.innerText = (tick.spread / pipUnit).toFixed(1);
                             }
 
                             if (tick.symbol === this.symbol) {
                                 const curPriceEl = document.getElementById("current-symbol-price");
-                                if (curPriceEl) curPriceEl.innerText = tick.price.toFixed(curPriceEl.innerText.includes(".") ? curPriceEl.innerText.split(".")[1].length : 2);
+                                if (curPriceEl) curPriceEl.innerText = tick.price.toFixed(dec);
                             }
 
                             // Broadcast tick to all active chart panes
@@ -685,6 +740,30 @@ document.addEventListener("DOMContentLoaded", () => {
                 syncToggle.addEventListener("change", () => {
                     this.syncSymbol = syncToggle.checked;
                     showToastNotification("Sync Mode", this.syncSymbol ? "Symbols synchronized across all panes" : "Panes can have independent symbols", "info");
+                });
+            }
+
+            // Chart Type Selector (Candles, Bars, Line, Area, Heikin-Ashi, Baseline)
+            const chartTypeSelect = document.getElementById("chart-type-select");
+            if (chartTypeSelect) {
+                chartTypeSelect.addEventListener("change", (e) => {
+                    const type = e.target.value;
+                    for (const p of this.panes) {
+                        if (p.chart) p.chart.setChartType(type);
+                    }
+                    showToastNotification("Chart Type", `Switched to ${chartTypeSelect.options[chartTypeSelect.selectedIndex].text}`, "info");
+                });
+            }
+
+            // Timezone Selector (Bottom Right)
+            const tzSelect = document.getElementById("chart-timezone-select");
+            if (tzSelect) {
+                tzSelect.addEventListener("change", (e) => {
+                    const offset = parseInt(e.target.value) || 0;
+                    for (const p of this.panes) {
+                        if (p.chart) p.chart.setTimezone(offset);
+                    }
+                    showToastNotification("Timezone", `Timezone updated to ${tzSelect.options[tzSelect.selectedIndex].text}`, "info");
                 });
             }
 
