@@ -124,37 +124,45 @@ class SymbolCandleStore:
         self.latest_tick_price = base_price
         self.prev_tick_price = base_price
 
-    def get_candles(self, timeframe: str = "1m", limit: int = 5000) -> List[Candle]:
+    def get_candles(
+        self, 
+        timeframe: str = "1m", 
+        limit: int = 5000, 
+        to_time: Optional[int] = None, 
+        from_time: Optional[int] = None
+    ) -> List[Candle]:
         tf = timeframe.lower().strip()
         sec = parse_timeframe_seconds(tf)
 
-        if tf in self.timeframe_candles and self.timeframe_candles[tf]:
-            if limit <= 0 or limit >= len(self.timeframe_candles[tf]):
-                return self.timeframe_candles[tf]
-            return self.timeframe_candles[tf][-limit:]
+        candles = self.timeframe_candles.get(tf, [])
+        if not candles and tf not in DEFAULT_TIMEFRAME_SECONDS:
+            # On-the-fly dynamic aggregation for custom arbitrary timeframes (e.g. 7m, 3h)
+            base_1m = self.timeframe_candles.get("1m", [])
+            if not base_1m:
+                return []
 
-        # On-the-fly dynamic aggregation for custom arbitrary timeframes (e.g. 7m, 3h)
-        base_1m = self.timeframe_candles.get("1m", [])
-        if not base_1m:
-            return []
+            bars_map: Dict[int, Candle] = {}
+            for c in base_1m:
+                bucket = (c.time // sec) * sec
+                if bucket not in bars_map:
+                    bars_map[bucket] = Candle(bucket, c.open, c.high, c.low, c.close, c.volume)
+                else:
+                    b = bars_map[bucket]
+                    b.high = max(b.high, c.high)
+                    b.low = min(b.low, c.low)
+                    b.close = c.close
+                    b.volume += c.volume
+            candles = list(bars_map.values())
+            self.timeframe_candles[tf] = candles
 
-        bars_map: Dict[int, Candle] = {}
-        for c in base_1m:
-            bucket = (c.time // sec) * sec
-            if bucket not in bars_map:
-                bars_map[bucket] = Candle(bucket, c.open, c.high, c.low, c.close, c.volume)
-            else:
-                b = bars_map[bucket]
-                b.high = max(b.high, c.high)
-                b.low = min(b.low, c.low)
-                b.close = c.close
-                b.volume += c.volume
-        
-        aggregated = list(bars_map.values())
-        self.timeframe_candles[tf] = aggregated
-        if limit <= 0 or limit >= len(aggregated):
-            return aggregated
-        return aggregated[-limit:]
+        if to_time is not None:
+            candles = [c for c in candles if c.time < to_time]
+        if from_time is not None:
+            candles = [c for c in candles if c.time >= from_time]
+
+        if limit <= 0 or limit >= len(candles):
+            return candles
+        return candles[-limit:]
 
     def update_tick(self, price: float, volume: float = 1.0, timestamp: Optional[int] = None) -> List[Tuple[str, bool, Candle]]:
         if timestamp is None:

@@ -24,11 +24,13 @@ async def get_supported_symbols():
 async def get_candles(
     symbol: str = Query(...),
     timeframe: str = Query(default="1m"),
-    limit: int = Query(default=10000, le=50000)
+    limit: int = Query(default=1500, le=50000),
+    to_time: Optional[int] = Query(default=None),
+    from_time: Optional[int] = Query(default=None)
 ):
     clean_sym = symbol.upper().replace("/", "").replace("-", "")
     store = candle_manager.get_or_create_store(clean_sym)
-    candles = store.get_candles(timeframe, limit=limit)
+    candles = store.get_candles(timeframe, limit=limit, to_time=to_time, from_time=from_time)
     return [c.to_dict() for c in candles]
 
 @router.get("/indicators")

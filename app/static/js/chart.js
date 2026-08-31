@@ -131,6 +131,16 @@ class TradingChart {
 
             this.setupDrawingCanvas();
 
+            // TradingView-style on-demand historical data loading when scrolling left
+            this.isLoadingOlder = false;
+            this.hasMoreOlder = true;
+            this.chart.timeScale().subscribeVisibleLogicalRangeChange(async (newRange) => {
+                if (!newRange || this.isLoadingOlder || !this.hasMoreOlder || !this.rawCandles || this.rawCandles.length === 0) return;
+                if (newRange.from < 25) {
+                    await this.loadMoreOlderCandles();
+                }
+            });
+
             // Resize Observer to handle grid layout splits dynamically
             if (window.ResizeObserver) {
                 this._resizeObserver = new ResizeObserver(entries => {
@@ -364,6 +374,28 @@ class TradingChart {
         }
     }
 
+    async loadMoreOlderCandles() {
+        if (this.isLoadingOlder || !this.hasMoreOlder || !this.rawCandles || this.rawCandles.length === 0) return;
+        this.isLoadingOlder = true;
+
+        const oldestTime = this.rawCandles[0].time;
+        try {
+            const resp = await fetch(`/api/market/candles?symbol=${this.currentSymbol}&timeframe=${this.currentTimeframe}&to_time=${oldestTime}&limit=1000`);
+            const olderData = await resp.json();
+            if (olderData && Array.isArray(olderData) && olderData.length > 0) {
+                const merged = [...olderData, ...this.rawCandles];
+                this.rawCandles = merged;
+                this.renderCandlesData(merged);
+            } else {
+                this.hasMoreOlder = false;
+            }
+        } catch(e) {
+            console.warn("Could not fetch older candles:", e);
+        } finally {
+            this.isLoadingOlder = false;
+        }
+    }
+
     renderCandlesData(data) {
         if (!data || data.length === 0 || !this.candleSeries) return;
 
@@ -384,14 +416,18 @@ class TradingChart {
         if (this.chartType === 'heikin_ashi') {
             let haOpen = (uniqueData[0].open + uniqueData[0].close) / 2.0;
             formattedData = uniqueData.map((c, idx) => {
-                const haClose = (c.open + c.high + c.low + c.close) / 4.0;
+                const o = Number(c.open);
+                const cl = Number(c.close);
+                const h = Math.max(Number(c.high), o, cl);
+                const l = Math.min(Number(c.low), o, cl);
+                const haClose = (o + h + l + cl) / 4.0;
                 if (idx > 0) {
                     haOpen = (haOpen + formattedData[idx - 1].close) / 2.0;
                 }
-                const haHigh = Math.max(c.high, haOpen, haClose);
-                const haLow = Math.min(c.low, haOpen, haClose);
+                const haHigh = Math.max(h, haOpen, haClose);
+                const haLow = Math.min(l, haOpen, haClose);
                 return {
-                    time: c.time + tzOffset,
+                    time: Math.floor(c.time + tzOffset),
                     open: haOpen,
                     high: haHigh,
                     low: haLow,
@@ -400,18 +436,24 @@ class TradingChart {
             });
         } else if (['line', 'area', 'baseline'].includes(this.chartType)) {
             formattedData = uniqueData.map(c => ({
-                time: c.time + tzOffset,
-                value: c.close
+                time: Math.floor(c.time + tzOffset),
+                value: Number(c.close)
             }));
         } else {
             // Standard Candlestick or OHLC Bars
-            formattedData = uniqueData.map(c => ({
-                time: c.time + tzOffset,
-                open: c.open,
-                high: c.high,
-                low: c.low,
-                close: c.close
-            }));
+            formattedData = uniqueData.map(c => {
+                const o = Number(c.open);
+                const cl = Number(c.close);
+                const h = Math.max(Number(c.high), o, cl);
+                const l = Math.min(Number(c.low), o, cl);
+                return {
+                    time: Math.floor(c.time + tzOffset),
+                    open: o,
+                    high: h,
+                    low: l,
+                    close: cl
+                };
+            });
         }
 
         const volData = uniqueData.map(c => ({
