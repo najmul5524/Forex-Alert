@@ -14,6 +14,7 @@ from app.api.alerts import router as alerts_router
 from app.api.market import router as market_router
 from app.api.notifications import router as notifications_router
 from app.api.settings import router as settings_router
+from app.api.download import router as download_router
 from app.api.websocket import ws_manager
 from app.engine.market_feed import market_feed
 from app.notifications.dispatcher import set_ws_broadcast_callback
@@ -57,6 +58,15 @@ app.include_router(alerts_router)
 app.include_router(market_router)
 app.include_router(notifications_router)
 app.include_router(settings_router)
+app.include_router(download_router)
+
+@app.get("/", response_class=HTMLResponse)
+async def get_dashboard(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={"vapid_public_key": settings.VAPID_PUBLIC_KEY}
+    )
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -64,18 +74,6 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
+            # Echo or ping/pong if needed
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
-    except Exception:
-        ws_manager.disconnect(websocket)
-
-@app.get("/", response_class=HTMLResponse)
-async def serve_dashboard(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        context={
-            "app_name": settings.APP_NAME,
-            "vapid_public_key": settings.VAPID_PUBLIC_KEY
-        }
-    )

@@ -35,8 +35,22 @@
     <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none *:pointer-events-auto"></div>
 
+    <!-- TOP PROMINENT APP DOWNLOAD BANNER -->
+    <div id="top-download-banner" class="bg-gradient-to-r from-sky-600 via-indigo-600 to-sky-700 text-white px-4 py-2 text-xs flex items-center justify-between shadow-md sticky top-0 z-50">
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="px-2 py-0.5 rounded-full bg-white/20 font-bold uppercase tracking-wider text-[10px]">📱 Android App Available</span>
+            <span class="font-semibold">Get 24/7 live price & indicator alerts with sound & vibration on your smartphone!</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="banner-download-btn" class="bg-white hover:bg-slate-100 text-sky-700 font-bold px-3 py-1 rounded-lg text-xs shadow transition-all flex items-center gap-1 active:scale-95">
+                <span>📥</span> Download App
+            </button>
+            <button id="close-banner-btn" class="text-white/80 hover:text-white text-sm font-bold leading-none">&times;</button>
+        </div>
+    </div>
+
     <!-- Top Navigation Header -->
-    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-5 py-3 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40 shadow-sm dark:shadow-lg transition-colors">
+    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-5 py-3 flex flex-wrap items-center justify-between gap-4 sticky top-[36px] z-40 shadow-sm dark:shadow-lg transition-colors">
         <div class="flex items-center gap-3">
             <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-extrabold text-lg">
                 ⚡
@@ -61,12 +75,16 @@
 
         <!-- Right: Actions & Modals -->
         <div class="flex items-center gap-2.5">
+            <!-- Prominent App Download Header Button -->
+            <button id="open-download-modal-btn" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5 active:scale-95">
+                <span>📲</span> Download App
+            </button>
             <!-- Light/Dark Mode Switcher -->
             <button id="theme-toggle-btn" class="p-2 rounded-lg text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-all text-xs flex items-center gap-1.5" title="Toggle Light / Dark Mode">
                 <span id="theme-toggle-icon">🌙</span> <span class="hidden sm:inline font-medium">Theme</span>
             </button>
             <button id="enable-push-btn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-50 dark:bg-sky-950 hover:bg-sky-100 dark:hover:bg-sky-900 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/80 transition-all flex items-center gap-1.5">
-                <span>📱</span> Enable Push Alerts
+                <span>📱</span> Push Alerts
             </button>
             <button id="open-settings-btn" class="p-2 rounded-lg text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-all text-xs flex items-center gap-1">
                 <span>⚙️</span> Settings
@@ -180,6 +198,57 @@
         </section>
 
     </main>
+
+    <!-- DOWNLOAD SMARTPHONE APP MODAL -->
+    <div id="download-app-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150 transition-colors">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-850">
+                <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
+                    <span>📱</span> Download Smartphone App
+                </h3>
+                <button id="close-download-modal-btn" class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg">&times;</button>
+            </div>
+            
+            <div class="p-5 space-y-4 text-xs">
+                <!-- Option 1: Instant Smartphone PWA Install -->
+                <div class="p-4 bg-sky-50 dark:bg-sky-950/60 rounded-xl border border-sky-200 dark:border-sky-800/80">
+                    <div class="font-bold text-sm text-sky-900 dark:text-sky-200 mb-1 flex items-center gap-2">
+                        <span>⚡</span> Option 1: Instant Smartphone Install (10 Seconds)
+                    </div>
+                    <p class="text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
+                        Install the app directly from your mobile browser without compiling APKs. Supports full 24/7 background notifications with audio & vibration!
+                    </p>
+                    <div class="bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-sky-200 dark:border-sky-800 text-[11px] text-slate-700 dark:text-slate-300 space-y-1">
+                        <div>1. Open <strong class="text-sky-600 dark:text-sky-400">https://forex-alert-wta1.onrender.com</strong> in Chrome on your Android phone.</div>
+                        <div>2. Tap the <strong>three dots menu (⋮)</strong> &rarr; select <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.</div>
+                        <div>3. Open the installed app and tap <strong>"📱 Enable Push Alerts"</strong>.</div>
+                    </div>
+                </div>
+
+                <!-- Option 2: Native Android APK & Source Code -->
+                <div class="p-4 bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <div class="font-bold text-sm text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-2">
+                        <span>📦</span> Option 2: GitHub Repository & Releases
+                    </div>
+                    <p class="text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
+                        Download the Flutter cross-platform mobile app source code and pre-built binaries from GitHub.
+                    </p>
+                    <div class="flex gap-2">
+                        <a href="https://github.com/najmul5524/Forex-Alert" target="_blank" class="flex-1 text-center bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 px-3 rounded-lg transition-all">
+                            View on GitHub ↗
+                        </a>
+                        <a href="/download/app" target="_blank" class="flex-1 text-center bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 px-3 rounded-lg transition-all shadow-md shadow-sky-600/20">
+                            Download Latest Release 📥
+                        </a>
+                    </div>
+                </div>
+
+                <div class="text-center pt-1 text-[11px] text-slate-400">
+                    Host: <span class="font-mono text-slate-500">https://forex-alert-wta1.onrender.com</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Create Alert Modal -->
     <div id="alert-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">

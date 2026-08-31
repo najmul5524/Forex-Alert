@@ -1,4 +1,4 @@
-﻿document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => {
     const App = {
         symbol: "EURUSD",
         timeframe: "1m",
@@ -426,6 +426,27 @@
                         showToastNotification("Push Test", res.detail || "Dispatched", "warning");
                     }
                 });
+            }
+
+            // Download Smartphone App Banner & Modal
+            const bannerDownloadBtn = document.getElementById("banner-download-btn");
+            const headerDownloadBtn = document.getElementById("open-download-modal-btn");
+            const closeDownloadBtn = document.getElementById("close-download-modal-btn");
+            const downloadModal = document.getElementById("download-app-modal");
+            const closeBannerBtn = document.getElementById("close-banner-btn");
+            const topBanner = document.getElementById("top-download-banner");
+
+            if (bannerDownloadBtn && downloadModal) {
+                bannerDownloadBtn.addEventListener("click", () => downloadModal.classList.remove("hidden"));
+            }
+            if (headerDownloadBtn && downloadModal) {
+                headerDownloadBtn.addEventListener("click", () => downloadModal.classList.remove("hidden"));
+            }
+            if (closeDownloadBtn && downloadModal) {
+                closeDownloadBtn.addEventListener("click", () => downloadModal.classList.add("hidden"));
+            }
+            if (closeBannerBtn && topBanner) {
+                closeBannerBtn.addEventListener("click", () => topBanner.classList.add("hidden"));
             }
 
             // Save Settings
