@@ -31,6 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 this.initWebSocket();
+                this.startCandleCountdownTimer();
             } catch (err) {
                 console.error("App init error:", err);
             }
@@ -120,6 +121,10 @@ document.addEventListener("DOMContentLoaded", () => {
         async changeTimeframe(newTf) {
             if (this.timeframe === newTf) return;
             this.timeframe = newTf;
+
+            const tfLabel = document.getElementById("current-tf-label");
+            if (tfLabel) tfLabel.textContent = newTf;
+
             document.querySelectorAll(".tf-btn").forEach(b => {
                 if (b.dataset.tf === newTf) {
                     b.classList.add("bg-sky-600", "text-white");
@@ -130,6 +135,33 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
             await this.chart.loadCandles(this.symbol, this.timeframe);
+            this.updateCandleCountdown();
+        },
+
+        startCandleCountdownTimer() {
+            this.updateCandleCountdown();
+            if (this._timerInterval) clearInterval(this._timerInterval);
+            this._timerInterval = setInterval(() => this.updateCandleCountdown(), 1000);
+        },
+
+        updateCandleCountdown() {
+            const timerEl = document.getElementById("candle-timer-countdown");
+            if (!timerEl || !this.chart) return;
+
+            const tfSec = this.chart.parseTfSeconds ? this.chart.parseTfSeconds(this.timeframe) : 60;
+            const now = Math.floor(Date.now() / 1000);
+            const elapsed = now % tfSec;
+            const remaining = Math.max(0, tfSec - elapsed);
+
+            const hrs = Math.floor(remaining / 3600);
+            const mins = Math.floor((remaining % 3600) / 60);
+            const secs = remaining % 60;
+
+            if (hrs > 0) {
+                timerEl.textContent = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            } else {
+                timerEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }
         },
 
         async loadAlerts() {

@@ -1,4 +1,4 @@
-﻿class TradingChart {
+class TradingChart {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
         this.chart = null;
@@ -206,6 +206,20 @@
                 if (this.volumeSeries) this.volumeSeries.setData(volData);
                 if (this.chart) this.chart.timeScale().fitContent();
 
+                // Initialize current forming bar from the last candle
+                if (candleData.length > 0) {
+                    const last = candleData[candleData.length - 1];
+                    const lastVol = volData[volData.length - 1];
+                    this.currentCandle = {
+                        time: last.time,
+                        open: last.open,
+                        high: last.high,
+                        low: last.low,
+                        close: last.close,
+                        volume: lastVol?.value || 1.0
+                    };
+                }
+
                 // Refresh all active indicators
                 await this.refreshAllIndicators();
                 this.redrawDrawings();
@@ -215,29 +229,75 @@
         }
     }
 
+    parseTfSeconds(tfStr) {
+        if (!tfStr) return 60;
+        const tf = String(tfStr).toLowerCase().trim();
+        const map = {
+            "1m": 60, "3m": 180, "5m": 300, "15m": 900, "30m": 1800, "45m": 2700,
+            "1h": 3600, "2h": 7200, "4h": 14400, "1d": 86400, "1w": 604800
+        };
+        if (map[tf]) return map[tf];
+        const match = tf.match(/^(\d+)([mhdwd])$/);
+        if (match) {
+            const val = parseInt(match[1]);
+            const unit = match[2];
+            if (unit === 'm') return val * 60;
+            if (unit === 'h') return val * 3600;
+            if (unit === 'd') return val * 86400;
+            if (unit === 'w') return val * 604800;
+        }
+        return 60;
+    }
+
     updateTick(symbol, tickData) {
         if (symbol !== this.currentSymbol || !this.candleSeries) return;
 
         try {
-            if (tickData.candle_1m && this.currentTimeframe === '1m') {
-                const c = tickData.candle_1m;
-                this.candleSeries.update({
-                    time: c.time,
-                    open: c.open,
-                    high: c.high,
-                    low: c.low,
-                    close: c.close,
+            const price = typeof tickData.price === 'number' ? tickData.price : parseFloat(tickData.price);
+            if (isNaN(price)) return;
+
+            const tfSec = this.parseTfSeconds(this.currentTimeframe);
+            const nowTs = tickData.timestamp || Math.floor(Date.now() / 1000);
+            const bucket = Math.floor(nowTs / tfSec) * tfSec;
+            const volume = tickData.volume || 1.0;
+
+            if (!this.currentCandle || bucket > this.currentCandle.time) {
+                // New bar for the active timeframe has opened
+                this.currentCandle = {
+                    time: bucket,
+                    open: price,
+                    high: price,
+                    low: price,
+                    close: price,
+                    volume: volume
+                };
+            } else {
+                // Update currently forming candle
+                this.currentCandle.high = Math.max(this.currentCandle.high, price);
+                this.currentCandle.low = Math.min(this.currentCandle.low, price);
+                this.currentCandle.close = price;
+                this.currentCandle.volume = (this.currentCandle.volume || 0) + volume;
+            }
+
+            this.candleSeries.update({
+                time: this.currentCandle.time,
+                open: this.currentCandle.open,
+                high: this.currentCandle.high,
+                low: this.currentCandle.low,
+                close: this.currentCandle.close,
+            });
+
+            if (this.volumeSeries) {
+                this.volumeSeries.update({
+                    time: this.currentCandle.time,
+                    value: this.currentCandle.volume,
+                    color: this.currentCandle.close >= this.currentCandle.open 
+                        ? (this.isDarkMode ? '#064e3b88' : '#a7f3d088') 
+                        : (this.isDarkMode ? '#88133788' : '#fecdd388')
                 });
-                if (this.volumeSeries) {
-                    this.volumeSeries.update({
-                        time: c.time,
-                        value: c.volume || 1.0,
-                        color: c.close >= c.open ? (this.isDarkMode ? '#064e3b88' : '#a7f3d088') : (this.isDarkMode ? '#88133788' : '#fecdd388')
-                    });
-                }
             }
         } catch(e) {
-            console.error("Tick update error:", e);
+            console.error("Tick update error on timeframe", this.currentTimeframe, e);
         }
     }
 

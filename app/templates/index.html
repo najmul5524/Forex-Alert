@@ -67,10 +67,20 @@
             </div>
         </div>
 
-        <!-- Middle: Current Selected Instrument Banner -->
-        <div class="hidden md:flex items-center gap-4 bg-slate-100 dark:bg-slate-850 px-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800">
-            <div class="text-sm font-bold text-slate-800 dark:text-slate-200" id="current-symbol-title">EUR / USD (EURUSD)</div>
-            <div class="text-base font-mono font-extrabold text-sky-600 dark:text-sky-400 tracking-wider" id="current-symbol-price">1.08500</div>
+        <!-- Middle: Current Selected Instrument Banner & Live Price with Remaining Time -->
+        <div class="hidden sm:flex items-center gap-4 bg-slate-100 dark:bg-slate-850 px-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div>
+                <div class="text-xs font-bold text-slate-800 dark:text-slate-200" id="current-symbol-title">EUR / USD (EURUSD)</div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                    <span>TF: <strong class="text-sky-600 dark:text-sky-400" id="current-tf-label">1m</strong></span>
+                </div>
+            </div>
+            <div class="text-right border-l border-slate-200 dark:border-slate-700 pl-3">
+                <div class="text-base font-mono font-extrabold text-sky-600 dark:text-sky-400 tracking-wider leading-none" id="current-symbol-price">1.08500</div>
+                <div class="text-[11px] font-mono font-bold text-amber-500 dark:text-amber-400 mt-0.5 flex items-center justify-end gap-1" id="candle-timer-container">
+                    <span>⏱️</span> <span id="candle-timer-countdown">00:45</span>
+                </div>
+            </div>
         </div>
 
         <!-- Right: Actions & Modals -->
