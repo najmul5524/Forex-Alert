@@ -127,8 +127,33 @@
 
             <!-- Indicators Modal Button -->
             <button id="open-indicators-modal-btn" class="px-3 py-1 rounded-lg font-bold bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 transition-all active:scale-95">
-                <span class="font-mono text-xs font-black">fx</span> Indicators Library
+                <span class="font-mono text-xs font-black">fx</span> Indicators
             </button>
+
+            <!-- Multi-Chart Layout Switcher (TradingView style) -->
+            <div class="flex items-center bg-white dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                <button class="chart-layout-btn px-2 py-0.5 rounded-md font-bold text-xs bg-sky-600 text-white" data-layout="1" title="Single Full Chart">
+                    🔲 1
+                </button>
+                <button class="chart-layout-btn px-2 py-0.5 rounded-md font-bold text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-layout="2h" title="2 Charts Side-by-Side (1x2)">
+                    ⬛⬛ 2
+                </button>
+                <button class="chart-layout-btn px-2 py-0.5 rounded-md font-bold text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-layout="2v" title="2 Charts Top-and-Bottom (2x1)">
+                    🔲/🔲
+                </button>
+                <button class="chart-layout-btn px-2 py-0.5 rounded-md font-bold text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-layout="3" title="3 Charts Split (1 Large + 2 Small)">
+                    🔲/🔲🔲 3
+                </button>
+                <button class="chart-layout-btn px-2 py-0.5 rounded-md font-bold text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-layout="4" title="4 Charts Quad Grid (2x2)">
+                    🔲🔲 4
+                </button>
+            </div>
+
+            <!-- Sync Symbol across Panes Toggle -->
+            <label class="flex items-center gap-1.5 cursor-pointer text-slate-600 dark:text-slate-300 font-semibold px-2 py-1 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] select-none hover:bg-slate-50 dark:hover:bg-slate-900" title="When enabled, selecting a symbol changes all chart windows simultaneously while keeping separate timeframes">
+                <input type="checkbox" id="sync-symbols-toggle" checked class="rounded text-sky-600 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700">
+                <span>🔗 Sync Symbol</span>
+            </label>
         </div>
 
         <!-- OHLCV Live Header Readout -->
@@ -167,16 +192,11 @@
             </button>
         </aside>
 
-        <!-- CENTER: INTERACTIVE CHART & ON-CHART LEGEND -->
-        <section class="flex-1 flex flex-col relative bg-white dark:bg-slate-950 min-w-0">
-            
-            <!-- ON-CHART INDICATOR LEGEND CONTAINER (Top-Left overlay) -->
-            <div id="chart-indicators-legend" class="absolute top-3 left-4 z-20 flex flex-col gap-1.5 pointer-events-none *:pointer-events-auto max-w-sm">
-                <!-- Dynamic indicator pills rendered here -->
+        <!-- CENTER: DYNAMIC MULTI-CHART GRID CONTAINER -->
+        <section class="flex-1 flex flex-col relative bg-slate-100 dark:bg-slate-950 min-w-0 p-1.5 gap-1.5 overflow-hidden">
+            <div id="charts-grid-container" class="w-full h-full grid grid-cols-1 grid-rows-1 gap-1.5">
+                <!-- Dynamically populated chart panes -->
             </div>
-
-            <!-- Chart Canvas Container -->
-            <div class="flex-1 relative w-full h-full min-h-[480px]" id="chart-container"></div>
         </section>
 
         <!-- RIGHT: INSTRUMENTS, ALERTS & LOGS SIDEBAR -->
@@ -596,9 +616,9 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="/static/js/chart.js"></script>
-    <script src="/static/js/notifications.js"></script>
-    <script src="/static/js/app.js"></script>
+    <!-- Scripts with Cache Busting -->
+    <script src="/static/js/chart.js?v=2.2.0"></script>
+    <script src="/static/js/notifications.js?v=2.2.0"></script>
+    <script src="/static/js/app.js?v=2.2.0"></script>
 </body>
 </html>

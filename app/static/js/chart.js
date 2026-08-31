@@ -1,12 +1,12 @@
 class TradingChart {
-    constructor(containerId) {
-        this.container = document.getElementById(containerId);
+    constructor(containerOrId, symbol = 'EURUSD', timeframe = '1m') {
+        this.container = typeof containerOrId === 'string' ? document.getElementById(containerOrId) : containerOrId;
         this.chart = null;
         this.candleSeries = null;
         this.volumeSeries = null;
         this.alertPriceLines = [];
-        this.currentSymbol = 'EURUSD';
-        this.currentTimeframe = '1m';
+        this.currentSymbol = symbol;
+        this.currentTimeframe = timeframe;
         this.isDarkMode = true;
         this.candlesData = [];
 
@@ -20,6 +20,7 @@ class TradingChart {
         this.currentDrawing = null;
         this.overlayCanvas = null;
         this.overlayCtx = null;
+        this._resizeObserver = null;
 
         // Callbacks
         this.onLegendUpdate = null;
@@ -27,6 +28,21 @@ class TradingChart {
         this.onCrosshairMoveCallback = null;
 
         this.init();
+    }
+
+    destroy() {
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+            this._resizeObserver = null;
+        }
+        if (this.chart) {
+            try { this.chart.remove(); } catch(e) {}
+            this.chart = null;
+        }
+        if (this.overlayCanvas) {
+            try { this.overlayCanvas.remove(); } catch(e) {}
+            this.overlayCanvas = null;
+        }
     }
 
     init() {
@@ -41,10 +57,14 @@ class TradingChart {
 
             // Make sure container has position relative for overlay canvas
             this.container.style.position = 'relative';
+            this.container.style.overflow = 'hidden';
+
+            const w = this.container.clientWidth || 400;
+            const h = this.container.clientHeight || 300;
 
             this.chart = LightweightCharts.createChart(this.container, {
-                width: this.container.clientWidth || 800,
-                height: this.container.clientHeight || 500,
+                width: w,
+                height: h,
                 layout: {
                     background: { color: isDark ? '#0f172a' : '#ffffff' },
                     textColor: isDark ? '#94a3b8' : '#475569',
@@ -126,10 +146,27 @@ class TradingChart {
 
             this.setupDrawingCanvas();
 
-            // Window resize handler
+            // Resize Observer to handle grid layout splits dynamically
+            if (window.ResizeObserver) {
+                this._resizeObserver = new ResizeObserver(entries => {
+                    for (const entry of entries) {
+                        const { width, height } = entry.contentRect;
+                        if (width > 0 && height > 0 && this.chart) {
+                            this.chart.applyOptions({ width: width, height: height });
+                            this.resizeDrawingCanvas();
+                        }
+                    }
+                });
+                this._resizeObserver.observe(this.container);
+            }
+
+            // Window resize fallback
             window.addEventListener('resize', () => {
                 if (this.chart && this.container) {
-                    this.chart.applyOptions({ width: this.container.clientWidth });
+                    this.chart.applyOptions({ 
+                        width: this.container.clientWidth, 
+                        height: this.container.clientHeight 
+                    });
                     this.resizeDrawingCanvas();
                 }
             });

@@ -9,32 +9,193 @@ document.addEventListener("DOMContentLoaded", () => {
         ws: null,
         vapidPublicKey: window.VAPID_PUBLIC_KEY || "",
 
+        // Multi-Chart Grid State
+        currentLayout: "1", // 1, 2h, 2v, 3, 4
+        syncSymbol: true,
+        activePaneIndex: 0,
+        panes: [],
+        defaultTimeframes: ["1m", "5m", "15m", "1h"],
+
         async init() {
             try {
                 this.initTheme();
                 this.setupEventListeners();
                 this.setupConditionFormWatcher();
 
-                this.chart = new TradingChart("chart-container");
-                if (this.chart) {
-                    this.chart.onLegendUpdate = (inds) => this.renderIndicatorLegend(inds);
-                    this.chart.onCrosshairMoveCallback = (bar) => this.updateOHLCVReadout(bar);
-                }
-
                 await this.loadSymbols();
                 await this.loadAlerts();
                 await this.loadLogs();
 
-                if (this.chart) {
-                    await this.chart.loadCandles(this.symbol, this.timeframe);
-                    this.chart.setAlertPriceLines(this.alerts);
-                }
+                await this.initMultiChartLayout(this.currentLayout);
 
                 this.initWebSocket();
                 this.startCandleCountdownTimer();
             } catch (err) {
                 console.error("App init error:", err);
             }
+        },
+
+        async initMultiChartLayout(layout = "1") {
+            this.currentLayout = layout;
+            const grid = document.getElementById("charts-grid-container");
+            if (!grid) return;
+
+            // Destroy existing chart instances cleanly
+            for (const p of this.panes) {
+                if (p.chart) p.chart.destroy();
+            }
+            this.panes = [];
+            grid.innerHTML = "";
+
+            // Configure Grid CSS
+            grid.className = "w-full h-full grid gap-1.5 min-h-0 ";
+            let paneCount = 1;
+            if (layout === "1") {
+                grid.className += "grid-cols-1 grid-rows-1";
+                paneCount = 1;
+            } else if (layout === "2h") {
+                grid.className += "grid-cols-2 grid-rows-1";
+                paneCount = 2;
+            } else if (layout === "2v") {
+                grid.className += "grid-cols-1 grid-rows-2";
+                paneCount = 2;
+            } else if (layout === "3") {
+                grid.className += "grid-cols-2 grid-rows-2";
+                paneCount = 3;
+            } else if (layout === "4") {
+                grid.className += "grid-cols-2 grid-rows-2";
+                paneCount = 4;
+            }
+
+            for (let i = 0; i < paneCount; i++) {
+                const paneId = `chart-pane-${i}`;
+                const paneSym = this.symbol;
+                const paneTf = this.defaultTimeframes[i % this.defaultTimeframes.length] || "1m";
+
+                const paneWrapper = document.createElement("div");
+                paneWrapper.className = `flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative transition-all ${
+                    i === this.activePaneIndex ? 'ring-2 ring-sky-500' : ''
+                }`;
+
+                if (layout === "3" && i === 0) {
+                    paneWrapper.className += " row-span-2";
+                }
+
+                paneWrapper.innerHTML = `
+                    <div class="px-2.5 py-1 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs shrink-0 select-none">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full ${i === this.activePaneIndex ? 'bg-sky-500' : 'bg-slate-400'}"></span>
+                            <select class="pane-sym-select bg-transparent font-bold text-slate-800 dark:text-slate-200 cursor-pointer focus:outline-none text-xs">
+                                ${this.symbols.map(s => `<option value="${s.symbol}" ${s.symbol === paneSym ? 'selected' : ''}>${s.symbol}</option>`).join("")}
+                            </select>
+                            <select class="pane-tf-select bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold px-1.5 py-0.5 rounded cursor-pointer text-[11px] focus:outline-none">
+                                <option value="1m" ${paneTf === '1m' ? 'selected' : ''}>1m</option>
+                                <option value="3m" ${paneTf === '3m' ? 'selected' : ''}>3m</option>
+                                <option value="5m" ${paneTf === '5m' ? 'selected' : ''}>5m</option>
+                                <option value="15m" ${paneTf === '15m' ? 'selected' : ''}>15m</option>
+                                <option value="30m" ${paneTf === '30m' ? 'selected' : ''}>30m</option>
+                                <option value="1h" ${paneTf === '1h' ? 'selected' : ''}>1h</option>
+                                <option value="4h" ${paneTf === '4h' ? 'selected' : ''}>4h</option>
+                                <option value="1d" ${paneTf === '1d' ? 'selected' : ''}>1D</option>
+                                <option value="1w" ${paneTf === '1w' ? 'selected' : ''}>1W</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="pane-countdown text-[11px] font-mono font-bold text-amber-500 dark:text-amber-400">⏱️ --</span>
+                            <button class="pane-focus-btn text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5 text-xs" title="Focus this chart pane">
+                                ⛶
+                            </button>
+                        </div>
+                    </div>
+                    <div id="${paneId}" class="flex-1 relative w-full h-full min-h-0"></div>
+                `;
+
+                grid.appendChild(paneWrapper);
+
+                const chartContainer = paneWrapper.querySelector(`#${paneId}`);
+                const chartInstance = new TradingChart(chartContainer, paneSym, paneTf);
+
+                if (i === 0) {
+                    chartInstance.onLegendUpdate = (inds) => this.renderIndicatorLegend(inds);
+                    chartInstance.onCrosshairMoveCallback = (bar) => this.updateOHLCVReadout(bar);
+                    this.chart = chartInstance;
+                }
+
+                await chartInstance.loadCandles(paneSym, paneTf);
+                chartInstance.setAlertPriceLines(this.alerts);
+
+                const paneObj = {
+                    index: i,
+                    id: paneId,
+                    symbol: paneSym,
+                    timeframe: paneTf,
+                    chart: chartInstance,
+                    wrapper: paneWrapper,
+                    timerEl: paneWrapper.querySelector(".pane-countdown")
+                };
+
+                // Wire pane events
+                paneWrapper.addEventListener("click", () => this.setActivePane(i));
+
+                const symSelect = paneWrapper.querySelector(".pane-sym-select");
+                symSelect.addEventListener("change", async (e) => {
+                    const newSym = e.target.value;
+                    if (this.syncSymbol) {
+                        await this.changeSymbol(newSym);
+                    } else {
+                        paneObj.symbol = newSym;
+                        await paneObj.chart.loadCandles(newSym, paneObj.timeframe);
+                        paneObj.chart.setAlertPriceLines(this.alerts);
+                    }
+                });
+
+                const tfSelect = paneWrapper.querySelector(".pane-tf-select");
+                tfSelect.addEventListener("change", async (e) => {
+                    paneObj.timeframe = e.target.value;
+                    await paneObj.chart.loadCandles(paneObj.symbol, paneObj.timeframe);
+                    this.updateCandleCountdown();
+                });
+
+                const focusBtn = paneWrapper.querySelector(".pane-focus-btn");
+                focusBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    if (this.currentLayout !== "1") {
+                        this.symbol = paneObj.symbol;
+                        this.timeframe = paneObj.timeframe;
+                        this.changeLayout("1");
+                    }
+                });
+
+                this.panes.push(paneObj);
+            }
+
+            this.updateHeaderPrice();
+        },
+
+        setActivePane(index) {
+            this.activePaneIndex = index;
+            this.panes.forEach((p, i) => {
+                if (i === index) {
+                    p.wrapper.classList.add("ring-2", "ring-sky-500");
+                    this.chart = p.chart;
+                    this.symbol = p.symbol;
+                    this.timeframe = p.timeframe;
+                    this.updateHeaderPrice();
+                } else {
+                    p.wrapper.classList.remove("ring-2", "ring-sky-500");
+                }
+            });
+        },
+
+        async changeLayout(layout) {
+            document.querySelectorAll(".chart-layout-btn").forEach(b => {
+                if (b.dataset.layout === layout) {
+                    b.className = "chart-layout-btn px-2 py-0.5 rounded-md font-bold text-xs bg-sky-600 text-white";
+                } else {
+                    b.className = "chart-layout-btn px-2 py-0.5 rounded-md font-bold text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800";
+                }
+            });
+            await this.initMultiChartLayout(layout);
         },
 
         initTheme() {
@@ -105,21 +266,32 @@ document.addEventListener("DOMContentLoaded", () => {
             const titleEl = document.getElementById("current-symbol-title");
             if (titleEl) titleEl.innerText = `${currentObj.name} (${currentObj.symbol})`;
             const priceEl = document.getElementById("current-symbol-price");
-            if (priceEl) {
-                priceEl.innerText = currentObj.current_price.toFixed(currentObj.decimals);
-            }
-        },
-
         async changeSymbol(newSym) {
-            if (this.symbol === newSym) return;
             this.symbol = newSym;
             this.renderSymbolsGrid();
-            await this.chart.loadCandles(this.symbol, this.timeframe);
-            this.chart.setAlertPriceLines(this.alerts);
+
+            if (this.syncSymbol) {
+                // Update all panes
+                for (const p of this.panes) {
+                    p.symbol = newSym;
+                    const sel = p.wrapper.querySelector(".pane-sym-select");
+                    if (sel) sel.value = newSym;
+                    await p.chart.loadCandles(newSym, p.timeframe);
+                    p.chart.setAlertPriceLines(this.alerts);
+                }
+            } else if (this.panes[this.activePaneIndex]) {
+                // Update active pane only
+                const p = this.panes[this.activePaneIndex];
+                p.symbol = newSym;
+                const sel = p.wrapper.querySelector(".pane-sym-select");
+                if (sel) sel.value = newSym;
+                await p.chart.loadCandles(newSym, p.timeframe);
+                p.chart.setAlertPriceLines(this.alerts);
+            }
+            this.updateHeaderPrice();
         },
 
         async changeTimeframe(newTf) {
-            if (this.timeframe === newTf) return;
             this.timeframe = newTf;
 
             const tfLabel = document.getElementById("current-tf-label");
@@ -134,7 +306,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     b.classList.add("text-slate-600", "dark:text-slate-400", "hover:bg-slate-100", "dark:hover:bg-slate-800");
                 }
             });
-            await this.chart.loadCandles(this.symbol, this.timeframe);
+
+            if (this.panes[this.activePaneIndex]) {
+                const p = this.panes[this.activePaneIndex];
+                p.timeframe = newTf;
+                const sel = p.wrapper.querySelector(".pane-tf-select");
+                if (sel) sel.value = newTf;
+                await p.chart.loadCandles(p.symbol, newTf);
+            }
             this.updateCandleCountdown();
         },
 
@@ -145,22 +324,36 @@ document.addEventListener("DOMContentLoaded", () => {
         },
 
         updateCandleCountdown() {
+            // Update top header main countdown
             const timerEl = document.getElementById("candle-timer-countdown");
-            if (!timerEl || !this.chart) return;
+            if (timerEl && this.chart) {
+                const tfSec = this.chart.parseTfSeconds ? this.chart.parseTfSeconds(this.timeframe) : 60;
+                const now = Math.floor(Date.now() / 1000);
+                const elapsed = now % tfSec;
+                const remaining = Math.max(0, tfSec - elapsed);
+                const hrs = Math.floor(remaining / 3600);
+                const mins = Math.floor((remaining % 3600) / 60);
+                const secs = remaining % 60;
+                timerEl.textContent = hrs > 0 
+                    ? `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+                    : `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }
 
-            const tfSec = this.chart.parseTfSeconds ? this.chart.parseTfSeconds(this.timeframe) : 60;
+            // Update countdown badge for every pane independently
             const now = Math.floor(Date.now() / 1000);
-            const elapsed = now % tfSec;
-            const remaining = Math.max(0, tfSec - elapsed);
-
-            const hrs = Math.floor(remaining / 3600);
-            const mins = Math.floor((remaining % 3600) / 60);
-            const secs = remaining % 60;
-
-            if (hrs > 0) {
-                timerEl.textContent = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-            } else {
-                timerEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            for (const p of this.panes) {
+                if (p.timerEl && p.chart) {
+                    const tfSec = p.chart.parseTfSeconds ? p.chart.parseTfSeconds(p.timeframe) : 60;
+                    const elapsed = now % tfSec;
+                    const remaining = Math.max(0, tfSec - elapsed);
+                    const hrs = Math.floor(remaining / 3600);
+                    const mins = Math.floor((remaining % 3600) / 60);
+                    const secs = remaining % 60;
+                    const str = hrs > 0 
+                        ? `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+                        : `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                    p.timerEl.textContent = `⏱️ ${str}`;
+                }
             }
         },
 
@@ -338,7 +531,13 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (tick.symbol === this.symbol) {
                             const curPriceEl = document.getElementById("current-symbol-price");
                             if (curPriceEl) curPriceEl.innerText = tick.price.toFixed(curPriceEl.innerText.includes(".") ? curPriceEl.innerText.split(".")[1].length : 2);
-                            this.chart.updateTick(tick.symbol, tick);
+                        }
+
+                        // Broadcast tick to all active chart panes
+                        for (const p of this.panes) {
+                            if (p.symbol === tick.symbol && p.chart) {
+                                p.chart.updateTick(tick.symbol, tick);
+                            }
                         }
                     } else if (msg.type === "alert_triggered") {
                         showToastNotification("🚨 Alert Triggered", msg.data.summary, "warning");
@@ -443,6 +642,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 themeBtn.addEventListener("click", () => {
                     const isDark = document.documentElement.classList.contains("dark");
                     this.setTheme(!isDark);
+                });
+            }
+
+            // Multi-Chart Layout Switcher Buttons
+            document.querySelectorAll(".chart-layout-btn").forEach(btn => {
+                btn.addEventListener("click", () => this.changeLayout(btn.dataset.layout));
+            });
+
+            // Sync Symbols Across Panes Toggle
+            const syncToggle = document.getElementById("sync-symbols-toggle");
+            if (syncToggle) {
+                syncToggle.addEventListener("change", () => {
+                    this.syncSymbol = syncToggle.checked;
+                    showToastNotification("Sync Mode", this.syncSymbol ? "Symbols synchronized across all panes" : "Panes can have independent symbols", "info");
                 });
             }
 
