@@ -19,119 +19,132 @@
     }
 
     init() {
-        if (!this.container || typeof LightweightCharts === 'undefined') return;
+        if (!this.container || typeof LightweightCharts === 'undefined') {
+            console.warn("LightweightCharts library or container not ready yet.");
+            return;
+        }
 
-        const isDark = document.documentElement.classList.contains('dark');
-        this.isDarkMode = isDark;
+        try {
+            const isDark = document.documentElement.classList.contains('dark');
+            this.isDarkMode = isDark;
 
-        this.chart = LightweightCharts.createChart(this.container, {
-            width: this.container.clientWidth,
-            height: this.container.clientHeight || 450,
-            layout: {
-                background: { color: isDark ? '#0f172a' : '#ffffff' },
-                textColor: isDark ? '#94a3b8' : '#475569',
-            },
-            grid: {
-                vertLines: { color: isDark ? '#1e293b' : '#f1f5f9' },
-                horzLines: { color: isDark ? '#1e293b' : '#f1f5f9' },
-            },
-            crosshair: {
-                mode: LightweightCharts.CrosshairMode.Normal,
-                vertLine: {
-                    width: 1,
-                    color: isDark ? '#64748b' : '#94a3b8',
-                    style: LightweightCharts.LineStyle.Dashed,
+            this.chart = LightweightCharts.createChart(this.container, {
+                width: this.container.clientWidth || 800,
+                height: this.container.clientHeight || 450,
+                layout: {
+                    background: { color: isDark ? '#0f172a' : '#ffffff' },
+                    textColor: isDark ? '#94a3b8' : '#475569',
                 },
-                horzLine: {
-                    width: 1,
-                    color: isDark ? '#64748b' : '#94a3b8',
-                    style: LightweightCharts.LineStyle.Dashed,
+                grid: {
+                    vertLines: { color: isDark ? '#1e293b' : '#f1f5f9' },
+                    horzLines: { color: isDark ? '#1e293b' : '#f1f5f9' },
                 },
-            },
-            timeScale: {
-                borderColor: isDark ? '#334155' : '#cbd5e1',
-                timeVisible: true,
-                secondsVisible: false,
-            },
-            rightPriceScale: {
-                borderColor: isDark ? '#334155' : '#cbd5e1',
+                crosshair: {
+                    mode: LightweightCharts.CrosshairMode.Normal,
+                    vertLine: {
+                        width: 1,
+                        color: isDark ? '#64748b' : '#94a3b8',
+                        style: LightweightCharts.LineStyle.Dashed,
+                    },
+                    horzLine: {
+                        width: 1,
+                        color: isDark ? '#64748b' : '#94a3b8',
+                        style: LightweightCharts.LineStyle.Dashed,
+                    },
+                },
+                timeScale: {
+                    borderColor: isDark ? '#334155' : '#cbd5e1',
+                    timeVisible: true,
+                    secondsVisible: false,
+                },
+                rightPriceScale: {
+                    borderColor: isDark ? '#334155' : '#cbd5e1',
+                    scaleMargins: {
+                        top: 0.1,
+                        bottom: 0.15,
+                    },
+                },
+            });
+
+            // Add main candlestick series with TradingView green/red palette
+            this.candleSeries = this.chart.addCandlestickSeries({
+                upColor: '#10b981',
+                downColor: '#f43f5e',
+                borderUpColor: '#10b981',
+                borderDownColor: '#f43f5e',
+                wickUpColor: '#10b981',
+                wickDownColor: '#f43f5e',
+            });
+
+            // Add volume histogram series
+            this.volumeSeries = this.chart.addHistogramSeries({
+                color: isDark ? '#38bdf8' : '#0284c7',
+                priceFormat: {
+                    type: 'volume',
+                },
+                priceScaleId: '',
                 scaleMargins: {
-                    top: 0.1,
-                    bottom: 0.15,
+                    top: 0.82,
+                    bottom: 0,
                 },
-            },
-        });
+            });
 
-        // Add main candlestick series with TradingView green/red palette
-        this.candleSeries = this.chart.addCandlestickSeries({
-            upColor: '#10b981',
-            downColor: '#f43f5e',
-            borderUpColor: '#10b981',
-            borderDownColor: '#f43f5e',
-            wickUpColor: '#10b981',
-            wickDownColor: '#f43f5e',
-        });
-
-        // Add volume histogram series
-        this.volumeSeries = this.chart.addHistogramSeries({
-            color: isDark ? '#38bdf8' : '#0284c7',
-            priceFormat: {
-                type: 'volume',
-            },
-            priceScaleId: '',
-            scaleMargins: {
-                top: 0.82,
-                bottom: 0,
-            },
-        });
-
-        // Resize handler
-        window.addEventListener('resize', () => {
-            if (this.chart && this.container) {
-                this.chart.applyOptions({ width: this.container.clientWidth });
-            }
-        });
+            // Resize handler
+            window.addEventListener('resize', () => {
+                if (this.chart && this.container) {
+                    this.chart.applyOptions({ width: this.container.clientWidth });
+                }
+            });
+        } catch(e) {
+            console.error("Chart creation error:", e);
+        }
     }
 
     setTheme(isDark) {
         this.isDarkMode = isDark;
         if (!this.chart) return;
 
-        this.chart.applyOptions({
-            layout: {
-                background: { color: isDark ? '#0f172a' : '#ffffff' },
-                textColor: isDark ? '#94a3b8' : '#475569',
-            },
-            grid: {
-                vertLines: { color: isDark ? '#1e293b' : '#f1f5f9' },
-                horzLines: { color: isDark ? '#1e293b' : '#f1f5f9' },
-            },
-            crosshair: {
-                vertLine: { color: isDark ? '#64748b' : '#94a3b8' },
-                horzLine: { color: isDark ? '#64748b' : '#94a3b8' },
-            },
-            timeScale: {
-                borderColor: isDark ? '#334155' : '#cbd5e1',
-            },
-            rightPriceScale: {
-                borderColor: isDark ? '#334155' : '#cbd5e1',
-            },
-        });
-
-        if (this.volumeSeries) {
-            this.volumeSeries.applyOptions({
-                color: isDark ? '#38bdf8' : '#0284c7',
+        try {
+            this.chart.applyOptions({
+                layout: {
+                    background: { color: isDark ? '#0f172a' : '#ffffff' },
+                    textColor: isDark ? '#94a3b8' : '#475569',
+                },
+                grid: {
+                    vertLines: { color: isDark ? '#1e293b' : '#f1f5f9' },
+                    horzLines: { color: isDark ? '#1e293b' : '#f1f5f9' },
+                },
+                crosshair: {
+                    vertLine: { color: isDark ? '#64748b' : '#94a3b8' },
+                    horzLine: { color: isDark ? '#64748b' : '#94a3b8' },
+                },
+                timeScale: {
+                    borderColor: isDark ? '#334155' : '#cbd5e1',
+                },
+                rightPriceScale: {
+                    borderColor: isDark ? '#334155' : '#cbd5e1',
+                },
             });
+
+            if (this.volumeSeries) {
+                this.volumeSeries.applyOptions({
+                    color: isDark ? '#38bdf8' : '#0284c7',
+                });
+            }
+        } catch(e) {
+            console.error("Set theme on chart error:", e);
         }
     }
 
     async loadCandles(symbol, timeframe) {
         this.currentSymbol = symbol;
         this.currentTimeframe = timeframe;
+        if (!this.candleSeries) return;
+
         try {
             const resp = await fetch(`/api/market/candles?symbol=${symbol}&timeframe=${timeframe}&limit=300`);
             const data = await resp.json();
-            if (data && data.length > 0) {
+            if (data && Array.isArray(data) && data.length > 0) {
                 const candleData = data.map(c => ({
                     time: c.time,
                     open: c.open,
@@ -145,9 +158,9 @@
                     color: c.close >= c.open ? (this.isDarkMode ? '#064e3b88' : '#a7f3d088') : (this.isDarkMode ? '#88133788' : '#fecdd388')
                 }));
 
-                this.candleSeries.setData(candleData);
-                this.volumeSeries.setData(volData);
-                this.chart.timeScale().fitContent();
+                if (this.candleSeries) this.candleSeries.setData(candleData);
+                if (this.volumeSeries) this.volumeSeries.setData(volData);
+                if (this.chart) this.chart.timeScale().fitContent();
 
                 // Refresh active overlays
                 await this.refreshIndicators();
@@ -158,30 +171,40 @@
     }
 
     updateTick(symbol, tickData) {
-        if (symbol !== this.currentSymbol) return;
+        if (symbol !== this.currentSymbol || !this.candleSeries) return;
 
-        if (tickData.candle_1m && this.currentTimeframe === '1m') {
-            const c = tickData.candle_1m;
-            this.candleSeries.update({
-                time: c.time,
-                open: c.open,
-                high: c.high,
-                low: c.low,
-                close: c.close,
-            });
-            this.volumeSeries.update({
-                time: c.time,
-                value: c.volume || 1.0,
-                color: c.close >= c.open ? (this.isDarkMode ? '#064e3b88' : '#a7f3d088') : (this.isDarkMode ? '#88133788' : '#fecdd388')
-            });
+        try {
+            if (tickData.candle_1m && this.currentTimeframe === '1m') {
+                const c = tickData.candle_1m;
+                this.candleSeries.update({
+                    time: c.time,
+                    open: c.open,
+                    high: c.high,
+                    low: c.low,
+                    close: c.close,
+                });
+                if (this.volumeSeries) {
+                    this.volumeSeries.update({
+                        time: c.time,
+                        value: c.volume || 1.0,
+                        color: c.close >= c.open ? (this.isDarkMode ? '#064e3b88' : '#a7f3d088') : (this.isDarkMode ? '#88133788' : '#fecdd388')
+                    });
+                }
+            }
+        } catch(e) {
+            console.error("Tick update error:", e);
         }
     }
 
     setAlertPriceLines(alerts) {
+        if (!this.candleSeries) return;
+
         for (const line of this.alertPriceLines) {
             try { this.candleSeries.removePriceLine(line); } catch(e) {}
         }
         this.alertPriceLines = [];
+
+        if (!Array.isArray(alerts)) return;
 
         const relevant = alerts.filter(a => a.symbol === this.currentSymbol && a.is_active);
         for (const a of relevant) {
@@ -190,15 +213,17 @@
             else if (a.params && a.params.upper_bound) target = a.params.upper_bound;
 
             if (target !== null) {
-                const line = this.candleSeries.createPriceLine({
-                    price: parseFloat(target),
-                    color: '#f59e0b',
-                    lineWidth: 1,
-                    lineStyle: LightweightCharts.LineStyle.Dashed,
-                    axisLabelVisible: true,
-                    title: `ALERT #${a.id} (${a.condition_type.replace('_', ' ')})`,
-                });
-                this.alertPriceLines.push(line);
+                try {
+                    const line = this.candleSeries.createPriceLine({
+                        price: parseFloat(target),
+                        color: '#f59e0b',
+                        lineWidth: 1,
+                        lineStyle: LightweightCharts.LineStyle.Dashed,
+                        axisLabelVisible: true,
+                        title: `ALERT #${a.id} (${(a.condition_type || '').replace('_', ' ')})`,
+                    });
+                    this.alertPriceLines.push(line);
+                } catch(e) {}
             }
         }
     }
@@ -209,6 +234,8 @@
     }
 
     async refreshIndicators() {
+        if (!this.chart) return;
+
         for (const key of Object.keys(this.indicatorSeries)) {
             try { this.chart.removeSeries(this.indicatorSeries[key]); } catch (e) {}
         }
@@ -236,7 +263,7 @@
             if (output) url += `&output=${output}`;
             const resp = await fetch(url);
             const data = await resp.json();
-            if (data && data.length > 0) {
+            if (data && Array.isArray(data) && data.length > 0 && this.chart) {
                 const lineSeries = this.chart.addLineSeries({
                     color: color,
                     lineWidth: 1.5,

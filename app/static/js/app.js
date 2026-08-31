@@ -10,17 +10,25 @@ document.addEventListener("DOMContentLoaded", () => {
         vapidPublicKey: window.VAPID_PUBLIC_KEY || "",
 
         async init() {
-            this.initTheme();
-            this.chart = new TradingChart("chart-container");
-            await this.loadSymbols();
-            await this.loadAlerts();
-            await this.loadLogs();
-            await this.chart.loadCandles(this.symbol, this.timeframe);
-            this.chart.setAlertPriceLines(this.alerts);
+            try {
+                this.initTheme();
+                this.setupEventListeners();
+                this.setupConditionFormWatcher();
 
-            this.initWebSocket();
-            this.setupEventListeners();
-            this.setupConditionFormWatcher();
+                this.chart = new TradingChart("chart-container");
+                await this.loadSymbols();
+                await this.loadAlerts();
+                await this.loadLogs();
+
+                if (this.chart) {
+                    await this.chart.loadCandles(this.symbol, this.timeframe);
+                    this.chart.setAlertPriceLines(this.alerts);
+                }
+
+                this.initWebSocket();
+            } catch (err) {
+                console.error("App init error:", err);
+            }
         },
 
         initTheme() {
