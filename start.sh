@@ -1,10 +1,4 @@
 ﻿#!/usr/bin/env bash
-set -e
-
-if [ -f "/opt/render/project/src/.venv/bin/python" ]; then
-    exec /opt/render/project/src/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}"
-elif [ -f "/opt/render/project/.venv/bin/python" ]; then
-    exec /opt/render/project/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}"
-else
-    exec python -m uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}"
-fi
+PORT="${PORT:-8000}"
+echo "Starting Forex Alert Engine on port $PORT..."
+exec gunicorn -w 1 -k uvicorn.workers.UvicornWorker app.main:app --bind "0.0.0.0:$PORT" --timeout 120
