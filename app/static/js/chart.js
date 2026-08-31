@@ -94,14 +94,17 @@ class TradingChart {
                     borderColor: isDark ? '#334155' : '#cbd5e1',
                     timeVisible: true,
                     secondsVisible: false,
-                    rightOffset: 12,
+                    rightOffset: 6,
+                    barSpacing: 6,
+                    minBarSpacing: 0.5,
                 },
                 rightPriceScale: {
                     borderColor: isDark ? '#334155' : '#cbd5e1',
                     scaleMargins: {
-                        top: 0.08,
-                        bottom: 0.08,
+                        top: 0.12,
+                        bottom: 0.12,
                     },
+                    autoScale: true,
                 },
             });
 
@@ -340,7 +343,7 @@ class TradingChart {
         if (!this.candleSeries) return;
 
         try {
-            const resp = await fetch(`/api/market/candles?symbol=${symbol}&timeframe=${timeframe}&limit=5000`);
+            const resp = await fetch(`/api/market/candles?symbol=${symbol}&timeframe=${timeframe}&limit=10000`);
             const data = await resp.json();
             if (data && Array.isArray(data) && data.length > 0) {
                 this.rawCandles = data;

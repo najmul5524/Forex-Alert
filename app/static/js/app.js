@@ -73,10 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const paneTf = this.defaultTimeframes[i % this.defaultTimeframes.length] || "1m";
 
                 const paneWrapper = document.createElement("div");
-                paneWrapper.className = `flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative transition-all ${
-                    i === this.activePaneIndex ? 'ring-2 ring-sky-500' : ''
-                }`;
-
+                paneWrapper.className = "group relative flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-0";
                 if (layout === "3" && i === 0) {
                     paneWrapper.className += " row-span-2";
                 }
@@ -102,21 +99,20 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                         <div class="flex items-center gap-1.5">
                             <span class="pane-countdown text-[11px] font-mono font-bold text-amber-500 dark:text-amber-400">⏱️ --</span>
-                            <button class="pane-zoom-in-btn text-slate-400 hover:text-sky-500 dark:hover:text-sky-400 p-0.5 text-xs" title="Zoom In">
-                                ➕
-                            </button>
-                            <button class="pane-zoom-out-btn text-slate-400 hover:text-sky-500 dark:hover:text-sky-400 p-0.5 text-xs" title="Zoom Out">
-                                ➖
-                            </button>
-                            <button class="pane-reset-btn text-slate-400 hover:text-sky-500 dark:hover:text-sky-400 p-0.5 text-xs" title="Reset chart & scroll to current candle">
-                                ⏭️
-                            </button>
                             <button class="pane-focus-btn text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5 text-xs" title="Focus this chart pane">
                                 ⛶
                             </button>
                         </div>
                     </div>
                     <div id="${paneId}" class="flex-1 relative w-full h-full min-h-0"></div>
+
+                    <!-- TradingView Bottom-Center Floating Navigation Toolbar (Invisible by default, appears on hover) -->
+                    <div class="pane-floating-nav absolute bottom-2.5 left-1/2 -translate-x-1/2 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-800 shadow-xl select-none pointer-events-auto">
+                        <button class="pane-zoom-in-btn flex items-center justify-center w-6 h-6 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-[10px] text-slate-700 dark:text-slate-200 transition-transform active:scale-90" title="Zoom In (TradingView)">➕</button>
+                        <button class="pane-zoom-out-btn flex items-center justify-center w-6 h-6 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-[10px] text-slate-700 dark:text-slate-200 transition-transform active:scale-90" title="Zoom Out (TradingView)">➖</button>
+                        <div class="h-3 w-px bg-slate-200 dark:bg-slate-800"></div>
+                        <button class="pane-reset-btn flex items-center gap-1 px-2 py-0.5 rounded-full hover:bg-sky-50 dark:hover:bg-sky-950 text-[10px] font-bold text-sky-600 dark:text-sky-400 transition-transform active:scale-95" title="Reset View (TradingView)">⏭️ Reset</button>
+                    </div>
                 `;
 
                 grid.appendChild(paneWrapper);
@@ -836,6 +832,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (p.chart) p.chart.resetView();
                     }
                     showToastNotification("Chart Reset", "Scrolled to current candle & auto-fit price scale", "info");
+                });
+            }
+
+            // Floating center navigation bar hover visibility
+            const chartSection = document.getElementById("charts-grid-container")?.parentElement;
+            const floatingNav = document.getElementById("chart-floating-nav");
+            if (chartSection && floatingNav) {
+                chartSection.addEventListener("mouseenter", () => {
+                    floatingNav.style.opacity = "1";
+                });
+                chartSection.addEventListener("mouseleave", () => {
+                    floatingNav.style.opacity = "0";
                 });
             }
 

@@ -224,6 +224,20 @@ class MarketFeedEngine:
                 logger.error(f"Simulation worker error: {e}")
                 await asyncio.sleep(1)
 
+    async def _populate_real_history_worker(self):
+        try:
+            from app.engine.real_market_data import real_market_data
+            for s in SUPPORTED_SYMBOLS:
+                sym = s["symbol"]
+                try:
+                    await real_market_data.populate_symbol_real_history(sym)
+                    logger.info(f"Loaded authentic real market history for {sym}")
+                except Exception as e:
+                    logger.debug(f"Could not load real history for {sym}: {e}")
+                await asyncio.sleep(0.5)
+        except Exception as e:
+            logger.error(f"Error in real history worker: {e}")
+
     async def start(self):
         if self.is_running:
             return
@@ -233,6 +247,7 @@ class MarketFeedEngine:
         self.tasks.append(asyncio.create_task(self._simulation_worker()))
         self.tasks.append(asyncio.create_task(self._binance_stream_worker()))
         self.tasks.append(asyncio.create_task(self._forex_polling_worker()))
+        self.tasks.append(asyncio.create_task(self._populate_real_history_worker()))
 
     async def stop(self):
         self.is_running = False

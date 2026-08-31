@@ -26,7 +26,7 @@
     <!-- Custom Styles & Favicon -->
     <link rel="icon" type="image/png" href="/static/icon.png">
     <link rel="apple-touch-icon" href="/static/icon.png">
-    <link rel="stylesheet" href="/static/css/styles.css?v=3.2.0">
+    <link rel="stylesheet" href="/static/css/styles.css?v=3.3.0">
     <link rel="manifest" href="/static/manifest.json">
     <script>
         window.VAPID_PUBLIC_KEY = {{ vapid_public_key | tojson }};
@@ -215,34 +215,35 @@
                 <!-- Dynamically populated chart panes -->
             </div>
 
-            <!-- Bottom-Right Timezone Selector, Zoom & Reset Toolbar (TradingView Style) -->
-            <div class="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 select-none">
+            <!-- TradingView Floating Center Navigation Toolbar (Invisible by default, visible on hover) -->
+            <div id="chart-floating-nav" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-800 shadow-xl select-none pointer-events-auto">
                 <!-- Zoom In Button -->
-                <button id="chart-zoom-in-btn" class="flex items-center justify-center w-7 h-7 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-lg border border-slate-200 dark:border-slate-800 shadow-md text-xs hover:bg-sky-50 dark:hover:bg-slate-800 font-bold text-slate-700 dark:text-slate-300 transition-all active:scale-90 cursor-pointer" title="Zoom In (TradingView Style)">
+                <button id="chart-zoom-in-btn" class="flex items-center justify-center w-7 h-7 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-xs text-slate-700 dark:text-slate-200 transition-transform active:scale-90 cursor-pointer" title="Zoom In (TradingView)">
                     <span>➕</span>
                 </button>
                 <!-- Zoom Out Button -->
-                <button id="chart-zoom-out-btn" class="flex items-center justify-center w-7 h-7 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-lg border border-slate-200 dark:border-slate-800 shadow-md text-xs hover:bg-sky-50 dark:hover:bg-slate-800 font-bold text-slate-700 dark:text-slate-300 transition-all active:scale-90 cursor-pointer" title="Zoom Out (TradingView Style)">
+                <button id="chart-zoom-out-btn" class="flex items-center justify-center w-7 h-7 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-xs text-slate-700 dark:text-slate-200 transition-transform active:scale-90 cursor-pointer" title="Zoom Out (TradingView)">
                     <span>➖</span>
                 </button>
-
-                <!-- TradingView Reset View / Scroll to Realtime Button -->
-                <button id="chart-reset-btn" class="flex items-center gap-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-md text-[11px] hover:bg-sky-50 dark:hover:bg-slate-800 font-bold text-sky-600 dark:text-sky-400 transition-all active:scale-95 cursor-pointer" title="Reset Chart & Scroll to Current Candle (TradingView Style)">
-                    <span>⏭️</span> <span class="hidden sm:inline">Reset</span>
+                <div class="h-3.5 w-px bg-slate-200 dark:bg-slate-800"></div>
+                <!-- Reset View Button -->
+                <button id="chart-reset-btn" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-sky-50 dark:hover:bg-sky-950/50 text-[11px] font-bold text-sky-600 dark:text-sky-400 transition-transform active:scale-95 cursor-pointer" title="Reset Chart View (TradingView)">
+                    <span>⏭️</span> <span>Reset</span>
                 </button>
+            </div>
 
-                <div class="flex items-center bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-md text-xs">
-                    <span class="text-slate-400 mr-1.5 text-[11px]">🌍</span>
-                    <select id="chart-timezone-select" class="bg-transparent font-bold text-slate-800 dark:text-slate-200 cursor-pointer focus:outline-none text-[11px]">
-                        <option value="0">UTC (London / +0)</option>
-                        <option value="-5">UTC-5 (New York / EDT)</option>
-                        <option value="1">UTC+1 (Frankfurt / CET)</option>
-                        <option value="4">UTC+4 (Dubai / GST)</option>
-                        <option value="6" selected>UTC+6 (Dhaka / BST)</option>
-                        <option value="8">UTC+8 (Singapore / HKT)</option>
-                        <option value="9">UTC+9 (Tokyo / JST)</option>
-                    </select>
-                </div>
+            <!-- Bottom-Right Timezone Selector -->
+            <div class="absolute bottom-3 right-3 z-30 flex items-center bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-md text-xs select-none">
+                <span class="text-slate-400 mr-1.5 text-[11px]">🌍</span>
+                <select id="chart-timezone-select" class="bg-transparent font-bold text-slate-800 dark:text-slate-200 cursor-pointer focus:outline-none text-[11px]">
+                    <option value="0">UTC (London / +0)</option>
+                    <option value="-5">UTC-5 (New York / EDT)</option>
+                    <option value="1">UTC+1 (Frankfurt / CET)</option>
+                    <option value="4">UTC+4 (Dubai / GST)</option>
+                    <option value="6" selected>UTC+6 (Dhaka / BST)</option>
+                    <option value="8">UTC+8 (Singapore / HKT)</option>
+                    <option value="9">UTC+9 (Tokyo / JST)</option>
+                </select>
             </div>
         </section>
 
@@ -699,8 +700,8 @@
     </div>
 
     <!-- Scripts with Cache Busting -->
-    <script src="/static/js/chart.js?v=3.2.0"></script>
-    <script src="/static/js/notifications.js?v=3.2.0"></script>
-    <script src="/static/js/app.js?v=3.2.0"></script>
+    <script src="/static/js/chart.js?v=3.3.0"></script>
+    <script src="/static/js/notifications.js?v=3.3.0"></script>
+    <script src="/static/js/app.js?v=3.3.0"></script>
 </body>
 </html>

@@ -24,7 +24,7 @@ async def get_supported_symbols():
 async def get_candles(
     symbol: str = Query(...),
     timeframe: str = Query(default="1m"),
-    limit: int = Query(default=5000, le=10000)
+    limit: int = Query(default=10000, le=50000)
 ):
     clean_sym = symbol.upper().replace("/", "").replace("-", "")
     store = candle_manager.get_or_create_store(clean_sym)
