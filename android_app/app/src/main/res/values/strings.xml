@@ -1,0 +1,5 @@
+﻿<resources>
+    <string name="app_name">Forex Alert</string>
+    <string name="channel_name">Forex &amp; Market Alerts</string>
+    <string name="channel_description">High priority alerts for live price and indicator crosses</string>
+</resources>

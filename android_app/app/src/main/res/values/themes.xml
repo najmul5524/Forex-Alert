@@ -1,0 +1,9 @@
+﻿<resources>
+    <style name="Theme.ForexAlert" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:statusBarColor">@color/slate_950</item>
+        <item name="android:navigationBarColor">@color/slate_950</item>
+        <item name="colorPrimary">@color/sky_500</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="android:windowBackground">@color/slate_950</item>
+    </style>
+</resources>

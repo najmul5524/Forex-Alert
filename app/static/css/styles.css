@@ -1,0 +1,36 @@
+﻿@layer utilities {
+    .bg-slate-850 {
+        background-color: #131d31;
+    }
+}
+
+/* Custom modern scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+.chart-wrapper {
+    position: relative;
+    width: 100%;
+    height: 480px;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
+    50% { box-shadow: 0 0 25px rgba(56, 189, 248, 0.5); }
+}
+
+.active-pulse {
+    animation: pulse-glow 2s infinite;
+}

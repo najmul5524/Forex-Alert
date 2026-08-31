@@ -1,0 +1,13 @@
+﻿services:
+  - type: web
+    name: forex-alert-engine
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run.py
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: DEFAULT_FEED_SOURCE
+        value: simulation

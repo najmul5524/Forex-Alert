@@ -1,0 +1,31 @@
+﻿# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+.pytest_cache/
+*.pem
+vapid*
+.env
+
+# Firebase / Secrets
+*google-services.json
+*google_services.json
+firebase_credentials.json
+
+# Flutter / Dart
+forex_alert_mobile/.dart_tool/
+forex_alert_mobile/build/
+forex_alert_mobile/.flutter-plugins
+forex_alert_mobile/.flutter-plugins-dependencies
+forex_alert_mobile/.packages
+forex_alert_mobile/.pub-cache/
+forex_alert_mobile/.pub/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
