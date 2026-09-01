@@ -236,17 +236,17 @@ class TradingChart {
                 bottomFillColor2: 'rgba(244, 63, 94, 0.28)',
             });
         } else {
-            // Standard Candlestick or Heikin-Ashi
+            // Standard Candlestick or Heikin-Ashi — exact TradingView defaults
             this.candleSeries = this.chart.addCandlestickSeries({
                 ...seriesOpts,
-                upColor: '#089981',
-                downColor: '#f23645',
-                borderVisible: true,
-                borderUpColor: '#089981',
-                borderDownColor: '#f23645',
-                wickVisible: true,
-                wickUpColor: '#089981',
-                wickDownColor: '#f23645',
+                upColor:          '#26a69a',
+                downColor:        '#ef5350',
+                borderVisible:    false,        // TradingView uses no border, relies on body fill
+                wickVisible:      true,
+                wickUpColor:      '#26a69a',
+                wickDownColor:    '#ef5350',
+                lastValueVisible: false,        // price scale label only, no floating body label
+                priceLineVisible: false,
             });
         }
     }
@@ -615,6 +615,29 @@ class TradingChart {
                         : (this.isDarkMode ? '#88133788' : '#fecdd388')
                 });
             }
+
+            // ── Real-time indicator auto-sync ─────────────────────────────
+            // Merge the live candle into rawCandles so indicators see the latest price
+            if (this.rawCandles && this.rawCandles.length > 0) {
+                const lastRaw = this.rawCandles[this.rawCandles.length - 1];
+                if (lastRaw.time === this.currentCandle.time) {
+                    // Update the live candle in place
+                    this.rawCandles[this.rawCandles.length - 1] = { ...this.currentCandle };
+                } else if (this.currentCandle.time > lastRaw.time) {
+                    // New bar — append it
+                    this.rawCandles.push({ ...this.currentCandle });
+                }
+                // Throttle indicator refresh to once per second
+                const nowMs = Date.now();
+                if (!this._lastIndRefresh || nowMs - this._lastIndRefresh >= 1000) {
+                    this._lastIndRefresh = nowMs;
+                    if (this.indicators && this.indicators.length > 0) {
+                        this.refreshAllIndicators().catch(() => {});
+                    }
+                }
+            }
+            // ─────────────────────────────────────────────────────────────
+
         } catch(e) {
             console.error("Tick update error on timeframe", this.currentTimeframe, e);
         }
@@ -815,6 +838,20 @@ class TradingChart {
         this.container.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         this.container.addEventListener('mouseup', (e) => this.handleMouseUp(e));
 
+        // Right-click → context menu on drawings
+        this.container.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const rect = this.container.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const hit = this._hitTestDrawing(x, y);
+            if (hit) {
+                this.selectedDrawingId = hit.id;
+                this.redrawDrawings();
+                this.showDrawingContextMenu(hit, e.clientX, e.clientY);
+            }
+        });
+
         // Keyboard Delete listener
         window.addEventListener('keydown', (e) => {
             if ((e.key === 'Delete' || e.key === 'Backspace') && this.selectedDrawingId) {
@@ -867,70 +904,132 @@ class TradingChart {
     }
 
     showDrawingToolbar(drawing, clientX, clientY) {
-        let tb = this.container.querySelector('.floating-drawing-toolbar');
-        if (!tb) {
-            tb = document.createElement('div');
-            tb.className = 'floating-drawing-toolbar absolute z-30 flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg px-2 py-1 select-none text-xs';
-            this.container.appendChild(tb);
-        }
+    // ── TradingView-style right-click context menu for drawings ──────────
+    showDrawingContextMenu(drawing, clientX, clientY) {
+        this.hideDrawingContextMenu();
 
-        const colors = ['#38bdf8', '#10b981', '#f43f5e', '#f59e0b', '#a855f7', '#ffffff'];
-        const colorBtns = colors.map(c => 
-            `<button class="w-3.5 h-3.5 rounded-full border border-slate-300 dark:border-slate-600 transition-transform active:scale-90" style="background-color: ${c}" data-color="${c}" title="Change Color"></button>`
+        const colors = ['#38bdf8','#26a69a','#ef5350','#f59e0b','#a855f7','#64748b','#ffffff'];
+        const colorSwatches = colors.map(c =>
+            `<button class="ctx-color-swatch w-5 h-5 rounded-full border-2 border-transparent hover:scale-110 transition-transform" style="background:${c}" data-color="${c}" title="${c}"></button>`
         ).join('');
 
-        tb.innerHTML = `
-            <div class="flex items-center gap-1 mr-1">
-                ${colorBtns}
+        const menu = document.createElement('div');
+        menu.className = 'drawing-ctx-menu';
+        menu.innerHTML = `
+            <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 select-none">
+                ${drawing.type.replace(/_/g,' ')}
             </div>
-            <div class="h-3 w-px bg-slate-200 dark:bg-slate-700"></div>
-            <select class="draw-width-select bg-transparent text-[11px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer">
-                <option value="1" ${drawing.lineWidth === 1 ? 'selected' : ''}>1px</option>
-                <option value="2" ${drawing.lineWidth === 2 || !drawing.lineWidth ? 'selected' : ''}>2px</option>
-                <option value="3" ${drawing.lineWidth === 3 ? 'selected' : ''}>3px</option>
-                <option value="4" ${drawing.lineWidth === 4 ? 'selected' : ''}>4px</option>
-            </select>
-            <div class="h-3 w-px bg-slate-200 dark:bg-slate-700"></div>
-            <button class="draw-delete-btn text-rose-500 hover:text-rose-600 font-bold px-1.5 py-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors" title="Delete Drawing (Del)">
-                ✕
-            </button>
+            <div class="ctx-separator"></div>
+            <div class="px-3 py-2 flex items-center gap-1.5 flex-wrap">${colorSwatches}</div>
+            <div class="px-3 pb-2 flex items-center gap-2">
+                <span class="text-[11px] text-slate-400">Width</span>
+                <div class="flex gap-1">
+                    ${[1,2,3,4].map(w => `<button class="ctx-width-btn w-7 h-6 rounded text-[10px] font-bold border ${drawing.lineWidth===w?'border-sky-500 text-sky-400 bg-sky-950':'border-slate-700 text-slate-400 hover:border-slate-500'}" data-w="${w}">${w}px</button>`).join('')}
+                </div>
+            </div>
+            <div class="ctx-separator"></div>
+            <button class="ctx-duplicate">📋 Duplicate</button>
+            <button class="ctx-delete danger">🗑️ Delete</button>
         `;
 
-        tb.querySelectorAll('[data-color]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        // Position near cursor but keep within viewport
+        document.body.appendChild(menu);
+        const mw = menu.offsetWidth || 160;
+        const mh = menu.offsetHeight || 200;
+        let left = clientX;
+        let top  = clientY;
+        if (left + mw > window.innerWidth  - 8) left = clientX - mw;
+        if (top  + mh > window.innerHeight - 8) top  = clientY - mh;
+        menu.style.left = `${Math.max(4, left)}px`;
+        menu.style.top  = `${Math.max(4, top)}px`;
+
+        // Color swatches
+        menu.querySelectorAll('.ctx-color-swatch').forEach(btn => {
+            btn.addEventListener('click', e => {
                 e.stopPropagation();
                 this.updateDrawing(drawing.id, { color: btn.dataset.color });
+                this.hideDrawingContextMenu();
             });
         });
 
-        const widthSelect = tb.querySelector('.draw-width-select');
-        if (widthSelect) {
-            widthSelect.addEventListener('change', (e) => {
+        // Width buttons
+        menu.querySelectorAll('.ctx-width-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
                 e.stopPropagation();
-                this.updateDrawing(drawing.id, { lineWidth: parseInt(e.target.value) });
+                this.updateDrawing(drawing.id, { lineWidth: parseInt(btn.dataset.w) });
+                this.hideDrawingContextMenu();
             });
-        }
+        });
 
-        const delBtn = tb.querySelector('.draw-delete-btn');
-        if (delBtn) {
-            delBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.removeDrawing(drawing.id);
-            });
-        }
+        // Duplicate
+        menu.querySelector('.ctx-duplicate').addEventListener('click', e => {
+            e.stopPropagation();
+            const clone = { ...drawing, id: `dr_${Date.now()}_${Math.floor(Math.random()*1000)}` };
+            if (clone.y !== undefined) clone.y = clone.y + 12;
+            if (clone.startY !== undefined) { clone.startY += 12; clone.endY += 12; }
+            this.drawings.push(clone);
+            this.redrawDrawings();
+            this.hideDrawingContextMenu();
+        });
 
-        const rect = this.container.getBoundingClientRect();
-        const top = Math.max(10, (clientY - rect.top) - 45);
-        const left = Math.max(10, Math.min(rect.width - 240, (clientX - rect.left) - 100));
+        // Delete
+        menu.querySelector('.ctx-delete').addEventListener('click', e => {
+            e.stopPropagation();
+            this.removeDrawing(drawing.id);
+            this.hideDrawingContextMenu();
+        });
 
-        tb.style.top = `${top}px`;
-        tb.style.left = `${left}px`;
-        tb.style.display = 'flex';
+        // Close on outside click
+        setTimeout(() => {
+            this._ctxMenuCloseHandler = (e) => {
+                if (!menu.contains(e.target)) this.hideDrawingContextMenu();
+            };
+            document.addEventListener('click', this._ctxMenuCloseHandler);
+            document.addEventListener('contextmenu', this._ctxMenuCloseHandler);
+        }, 10);
+
+        this._activeCtxMenu = menu;
     }
 
-    hideDrawingToolbar() {
-        const tb = this.container.querySelector('.floating-drawing-toolbar');
-        if (tb) tb.style.display = 'none';
+    hideDrawingContextMenu() {
+        if (this._activeCtxMenu) {
+            try { this._activeCtxMenu.remove(); } catch(_) {}
+            this._activeCtxMenu = null;
+        }
+        if (this._ctxMenuCloseHandler) {
+            document.removeEventListener('click', this._ctxMenuCloseHandler);
+            document.removeEventListener('contextmenu', this._ctxMenuCloseHandler);
+            this._ctxMenuCloseHandler = null;
+        }
+    }
+
+    // Keep old names as aliases so nothing breaks
+    showDrawingToolbar(drawing, clientX, clientY) { this.showDrawingContextMenu(drawing, clientX, clientY); }
+    hideDrawingToolbar() { this.hideDrawingContextMenu(); }
+
+    // Hit-test: returns the topmost drawing at (x, y) or null
+    _hitTestDrawing(x, y) {
+        for (let i = this.drawings.length - 1; i >= 0; i--) {
+            const d = this.drawings[i];
+            if (d.type === 'horizontal_ray') {
+                if (Math.abs(y - d.y) <= 8) return d;
+            } else if (d.type === 'trendline') {
+                const A = x - d.startX, B = y - d.startY;
+                const C = d.endX - d.startX, D = d.endY - d.startY;
+                const len_sq = C * C + D * D;
+                if (len_sq === 0) continue;
+                const param = Math.max(0, Math.min(1, (A * C + B * D) / len_sq));
+                const dist = Math.hypot(x - (d.startX + param * C), y - (d.startY + param * D));
+                if (dist <= 8) return d;
+            } else if (d.type === 'fibonacci' || d.type === 'measure') {
+                const minX = Math.min(d.startX, d.endX) - 6;
+                const maxX = Math.max(d.startX, d.endX) + 6;
+                const minY = Math.min(d.startY, d.endY) - 6;
+                const maxY = Math.max(d.startY, d.endY) + 6;
+                if (x >= minX && x <= maxX && y >= minY && y <= maxY) return d;
+            }
+        }
+        return null;
     }
 
     handleMouseDown(e) {
@@ -941,45 +1040,15 @@ class TradingChart {
         const y = e.clientY - rect.top;
 
         if (this.activeTool === 'cursor') {
-            // Hit test drawings for selection / editing / deletion
-            let hit = null;
-            for (let i = this.drawings.length - 1; i >= 0; i--) {
-                const d = this.drawings[i];
-                if (d.type === 'horizontal_ray') {
-                    if (Math.abs(y - d.y) <= 8) { hit = d; break; }
-                } else if (d.type === 'trendline') {
-                    const A = x - d.startX;
-                    const B = y - d.startY;
-                    const C = d.endX - d.startX;
-                    const D = d.endY - d.startY;
-                    const dot = A * C + B * D;
-                    const len_sq = C * C + D * D;
-                    let param = -1;
-                    if (len_sq !== 0) param = dot / len_sq;
-                    let xx, yy;
-                    if (param < 0) { xx = d.startX; yy = d.startY; }
-                    else if (param > 1) { xx = d.endX; yy = d.endY; }
-                    else { xx = d.startX + param * C; yy = d.startY + param * D; }
-                    const dist = Math.hypot(x - xx, y - yy);
-                    if (dist <= 8) { hit = d; break; }
-                } else if (d.type in { fibonacci: 1, measure: 1 }) {
-                    const minX = Math.min(d.startX, d.endX);
-                    const maxX = Math.max(d.startX, d.endX);
-                    const minY = Math.min(d.startY, d.endY);
-                    const maxY = Math.max(d.startY, d.endY);
-                    if (x >= minX - 6 && x <= maxX + 6 && y >= minY - 6 && y <= maxY + 6) {
-                        hit = d; break;
-                    }
-                }
-            }
-
+            // Hit test drawings for selection
+            const hit = this._hitTestDrawing(x, y);
             if (hit) {
                 this.selectedDrawingId = hit.id;
-                this.showDrawingToolbar(hit, e.clientX, e.clientY);
                 this.redrawDrawings();
+                // Left-click on drawing: just select it (right-click opens context menu)
             } else {
                 this.selectedDrawingId = null;
-                this.hideDrawingToolbar();
+                this.hideDrawingContextMenu();
                 this.redrawDrawings();
             }
             return;

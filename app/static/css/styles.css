@@ -1,36 +1,114 @@
-﻿@layer utilities {
-    .bg-slate-850 {
-        background-color: #131d31;
-    }
+/* ======================================================
+   Forex Alert – Global Layout & Chart Styles  v4.0
+   ====================================================== */
+
+/* Make the whole page a fixed viewport — no body scroll */
+html, body {
+    height: 100%;
+    overflow: hidden;
 }
 
-/* Custom modern scrollbars */
-::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-::-webkit-scrollbar-track {
-    background: #0f172a;
-}
-::-webkit-scrollbar-thumb {
-    background: #334155;
-    border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #475569;
+/* ── Main workstation fills remaining viewport exactly ── */
+body > main {
+    height: calc(100vh - var(--header-h, 88px));
+    min-height: 0;
+    overflow: hidden;
 }
 
-.chart-wrapper {
-    position: relative;
+/* Charts grid: always fills its section */
+#charts-grid-container {
+    height: 100%;
+    min-height: 0;
+}
+
+/* Every chart pane fills the grid cell */
+.chart-pane-wrapper {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ── Scrollbars (TradingView-like thin) ── */
+::-webkit-scrollbar          { width: 5px; height: 5px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: #334155; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+/* ── Drawing-tool sidebar active state ── */
+.draw-tool-btn.active {
+    background-color: rgba(14, 165, 233, 0.15);
+    color: #38bdf8;
+    border-radius: 8px;
+    outline: 1.5px solid rgba(14, 165, 233, 0.4);
+}
+
+/* ── Indicator legend items ── */
+.ind-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+}
+.ind-legend-item:hover { background: rgba(100, 116, 139, 0.12); }
+.ind-legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* ── Drawing context-menu (TradingView style) ── */
+.drawing-ctx-menu {
+    position: absolute;
+    z-index: 100;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 4px 0;
+    min-width: 150px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+    font-size: 12px;
+    color: #e2e8f0;
+}
+.drawing-ctx-menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     width: 100%;
-    height: 480px;
+    padding: 7px 14px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.1s;
+}
+.drawing-ctx-menu button:hover { background: rgba(148,163,184,0.1); }
+.drawing-ctx-menu button.danger { color: #f87171; }
+.drawing-ctx-menu .ctx-separator {
+    height: 1px;
+    background: #334155;
+    margin: 3px 0;
 }
 
-@keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
-    50% { box-shadow: 0 0 25px rgba(56, 189, 248, 0.5); }
+/* ── Toast notifications ── */
+.toast-enter {
+    animation: slideInRight 0.3s ease;
+}
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0);   opacity: 1; }
 }
 
-.active-pulse {
-    animation: pulse-glow 2s infinite;
+/* ── Go-To Date picker ── */
+.pane-goto-picker {
+    animation: fadeInUp 0.15s ease;
+}
+@keyframes fadeInUp {
+    from { transform: translateY(8px); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
 }

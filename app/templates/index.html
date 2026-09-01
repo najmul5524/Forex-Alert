@@ -26,13 +26,13 @@
     <!-- Custom Styles & Favicon -->
     <link rel="icon" type="image/png" href="/static/icon.png">
     <link rel="apple-touch-icon" href="/static/icon.png">
-    <link rel="stylesheet" href="/static/css/styles.css?v=3.6.0">
+    <link rel="stylesheet" href="/static/css/styles.css?v=4.0.0">
     <link rel="manifest" href="/static/manifest.json">
     <script>
         window.VAPID_PUBLIC_KEY = {{ vapid_public_key | tojson }};
     </script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-sky-500 selection:text-white transition-colors duration-200">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 h-screen overflow-hidden flex flex-col font-sans antialiased selection:bg-sky-500 selection:text-white transition-colors duration-200">
 
     <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none *:pointer-events-auto"></div>
@@ -182,7 +182,7 @@
     </div>
 
     <!-- MAIN TRADINGVIEW WORKSTATION LAYOUT -->
-    <main class="flex-1 flex overflow-hidden min-h-0 relative">
+    <main class="flex-1 min-h-0 flex overflow-hidden relative">
         
         <!-- LEFT DRAWING TOOLS SIDEBAR (TradingView Style) -->
         <aside class="w-12 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col items-center py-3 gap-2 shrink-0 z-30 transition-colors">
