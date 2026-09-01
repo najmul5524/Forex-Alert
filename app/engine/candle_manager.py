@@ -67,62 +67,56 @@ class SymbolCandleStore:
 
     def seed_initial_candles(self, base_price: float = 1.0850, volatility: float = 0.0004):
         now = int(time.time())
+        dec = 5
+        sym = self.symbol.upper()
+        if any(x in sym for x in ["JPY"]):
+            dec = 3
+        elif any(x in sym for x in ["XAU", "OIL", "BTC", "ETH", "SOL", "BNB", "SPX", "NAS", "US30"]):
+            dec = 2
+        elif any(x in sym for x in ["XAG", "XRP"]):
+            dec = 4
 
         # Timeframe-specific historical depth (1 Year+ for 1h, 4h, 1d, 1w)
         tf_depths = {
-            "1w": (320, 604800, volatility * 5.0),    # 320 weeks (~6.1 years)
-            "1d": (1200, 86400, volatility * 3.0),    # 1200 days (~3.3 years)
-            "4h": (3000, 14400, volatility * 1.8),    # 3000 4h bars (~1.37 years)
-            "2h": (4000, 7200, volatility * 1.4),     # 4000 2h bars (~1.0 years)
-            "1h": (9000, 3600, volatility * 1.2),     # 9000 1h bars (~1.03 years / 375 days)
-            "45m": (2500, 2700, volatility * 1.1),    # 2500 45m bars (~78 days)
-            "30m": (3500, 1800, volatility * 1.0),    # 3500 30m bars (~73 days)
-            "15m": (3500, 900, volatility * 0.8),     # 3500 15m bars (~36 days)
-            "5m": (3500, 300, volatility * 0.6),      # 3500 5m bars (~12 days)
-            "3m": (3500, 180, volatility * 0.5),      # 3500 3m bars (~7 days)
-            "1m": (3500, 60, volatility * 0.4),       # 3500 1m bars (~2.4 days)
+            "1w": (320, 604800, volatility * 4.0),
+            "1d": (1200, 86400, volatility * 2.5),
+            "4h": (3000, 14400, volatility * 1.6),
+            "2h": (4000, 7200, volatility * 1.3),
+            "1h": (8000, 3600, volatility * 1.1),
+            "45m": (2500, 2700, volatility * 1.0),
+            "30m": (3500, 1800, volatility * 0.9),
+            "15m": (3500, 900, volatility * 0.8),
+            "5m": (3500, 300, volatility * 0.6),
+            "3m": (3500, 180, volatility * 0.5),
+            "1m": (3500, 60, volatility * 0.4),
         }
 
         for tf, (num_bars, sec, tf_vol) in tf_depths.items():
-            start_time = (now // sec) * sec - (num_bars * sec)
-            curr_p = base_price * (1.0 + (random.uniform(-0.03, 0.03)))
-            candles_list: List[Candle] = []
-
-            cycle_len = max(30, num_bars // 20)
-            trend = random.choice([-1.0, 1.0])
+            curr_p = base_price
+            candles_rev: List[Candle] = []
 
             for i in range(num_bars):
-                bar_time = start_time + (i * sec)
-                if i % cycle_len == 0:
-                    trend = random.choice([-1.0, 1.0]) * random.uniform(0.7, 1.3)
+                bar_time = (now // sec) * sec - (i * sec)
+                drift = (random.random() - 0.498) * tf_vol
+                prev_p = curr_p - drift
 
-                # Mean reversion back towards base_price near the end
-                progress = i / float(num_bars)
-                mean_pull = (base_price - curr_p) * 0.015 * (progress ** 2)
+                open_p = round(prev_p, dec)
+                close_p = round(curr_p, dec)
 
-                drift = (trend * tf_vol * 0.2) + mean_pull + ((random.random() - 0.495) * tf_vol)
-                open_p = curr_p
-                close_p = open_p + drift
+                w_up = abs(random.random() * tf_vol * 0.45)
+                w_dn = abs(random.random() * tf_vol * 0.45)
 
-                wick_up = abs(random.random() * tf_vol * 0.7)
-                wick_down = abs(random.random() * tf_vol * 0.7)
-                high_p = max(open_p, close_p) + wick_up
-                low_p = min(open_p, close_p) - wick_down
-                vol = random.uniform(20.0, 500.0)
+                high_p = round(max(open_p, close_p) + w_up, dec)
+                low_p = round(min(open_p, close_p) - w_dn, dec)
+                vol = round(random.uniform(20.0, 500.0), 2)
 
-                candles_list.append(Candle(bar_time, open_p, high_p, low_p, close_p, vol))
-                curr_p = close_p
+                candles_rev.append(Candle(bar_time, open_p, high_p, low_p, close_p, vol))
+                curr_p = prev_p
 
-            # Ensure the very last bar ends right at base_price
-            if candles_list:
-                candles_list[-1].close = base_price
-                candles_list[-1].high = max(candles_list[-1].high, base_price)
-                candles_list[-1].low = min(candles_list[-1].low, base_price)
+            self.timeframe_candles[tf] = list(reversed(candles_rev))
 
-            self.timeframe_candles[tf] = candles_list
-
-        self.latest_tick_price = base_price
-        self.prev_tick_price = base_price
+        self.latest_tick_price = round(base_price, dec)
+        self.prev_tick_price = round(base_price, dec)
 
     def get_candles(
         self, 
@@ -168,6 +162,16 @@ class SymbolCandleStore:
         if timestamp is None:
             timestamp = int(time.time())
 
+        dec = 5
+        sym = self.symbol.upper()
+        if any(x in sym for x in ["JPY"]):
+            dec = 3
+        elif any(x in sym for x in ["XAU", "OIL", "BTC", "ETH", "SOL", "BNB", "SPX", "NAS", "US30"]):
+            dec = 2
+        elif any(x in sym for x in ["XAG", "XRP"]):
+            dec = 4
+
+        price = round(price, dec)
         self.prev_tick_price = self.latest_tick_price
         self.latest_tick_price = price
 
@@ -185,10 +189,10 @@ class SymbolCandleStore:
 
             last_c = candles[-1]
             if last_c.time == bucket_time:
-                last_c.high = max(last_c.high, price)
-                last_c.low = min(last_c.low, price)
+                last_c.high = round(max(last_c.high, price), dec)
+                last_c.low = round(min(last_c.low, price), dec)
                 last_c.close = price
-                last_c.volume += volume
+                last_c.volume = round(last_c.volume + volume, 2)
                 events.append((tf, False, last_c))
             elif bucket_time > last_c.time:
                 events.append((tf, True, last_c)) # Bar close event

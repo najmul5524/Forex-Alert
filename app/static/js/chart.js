@@ -202,41 +202,43 @@ class TradingChart {
         if (type === 'bar') {
             this.candleSeries = this.chart.addBarSeries({
                 ...seriesOpts,
-                upColor: '#089981',
-                downColor: '#f23645',
+                upColor: '#10b981',
+                downColor: '#f43f5e',
             });
         } else if (type === 'line') {
             this.candleSeries = this.chart.addLineSeries({
                 ...seriesOpts,
-                color: '#2962ff',
+                color: '#38bdf8',
                 lineWidth: 2,
             });
         } else if (type === 'area') {
             this.candleSeries = this.chart.addAreaSeries({
                 ...seriesOpts,
-                topColor: 'rgba(41, 98, 255, 0.35)',
-                bottomColor: 'rgba(41, 98, 255, 0.0)',
-                lineColor: '#2962ff',
+                topColor: isDark ? 'rgba(56, 189, 248, 0.4)' : 'rgba(14, 165, 233, 0.3)',
+                bottomColor: isDark ? 'rgba(56, 189, 248, 0.0)' : 'rgba(14, 165, 233, 0.0)',
+                lineColor: '#38bdf8',
                 lineWidth: 2,
             });
         } else if (type === 'baseline') {
             this.candleSeries = this.chart.addBaselineSeries({
                 ...seriesOpts,
-                topLineColor: '#089981',
-                topFillColor1: 'rgba(8, 153, 129, 0.28)',
-                topFillColor2: 'rgba(8, 153, 129, 0.05)',
-                bottomLineColor: '#f23645',
-                bottomFillColor1: 'rgba(242, 54, 69, 0.05)',
-                bottomFillColor2: 'rgba(242, 54, 69, 0.28)',
+                topLineColor: '#10b981',
+                topFillColor1: 'rgba(16, 185, 129, 0.28)',
+                topFillColor2: 'rgba(16, 185, 129, 0.05)',
+                bottomLineColor: '#f43f5e',
+                bottomFillColor1: 'rgba(244, 63, 94, 0.05)',
+                bottomFillColor2: 'rgba(244, 63, 94, 0.28)',
             });
         } else {
-            // Standard Candlestick or Heikin-Ashi (TradingView styling)
+            // Standard Candlestick or Heikin-Ashi
             this.candleSeries = this.chart.addCandlestickSeries({
                 ...seriesOpts,
                 upColor: '#089981',
                 downColor: '#f23645',
+                borderVisible: true,
                 borderUpColor: '#089981',
                 borderDownColor: '#f23645',
+                wickVisible: true,
                 wickUpColor: '#089981',
                 wickDownColor: '#f23645',
             });
@@ -399,40 +401,35 @@ class TradingChart {
     renderCandlesData(data) {
         if (!data || data.length === 0 || !this.candleSeries) return;
 
-        const tzOffset = this.timezoneOffsetSeconds || 0;
+        // Sort ascending and remove duplicate timestamps
         const sorted = [...data].sort((a, b) => a.time - b.time);
-        
-        // Strict deduplication by final adjusted integer timestamp
-        const cleanMap = new Map();
+        const uniqueData = [];
+        const seen = new Set();
         for (const item of sorted) {
-            if (!item || item.time === undefined || item.time === null) continue;
-            const t = Math.floor(Number(item.time) + tzOffset);
-            const o = Number(item.open);
-            const cl = Number(item.close);
-            let h = Number(item.high);
-            let l = Number(item.low);
-            if (isNaN(o) || isNaN(cl)) continue;
-            if (isNaN(h) || h < Math.max(o, cl)) h = Math.max(o, cl);
-            if (isNaN(l) || l > Math.min(o, cl)) l = Math.min(o, cl);
-            const v = Number(item.volume) || 1.0;
-            cleanMap.set(t, { time: t, open: o, high: h, low: l, close: cl, volume: v, rawTime: item.time });
+            if (!seen.has(item.time)) {
+                seen.add(item.time);
+                uniqueData.push(item);
+            }
         }
 
-        const uniqueData = Array.from(cleanMap.values()).sort((a, b) => a.time - b.time);
-        if (uniqueData.length === 0) return;
-
+        const tzOffset = this.timezoneOffsetSeconds || 0;
         let formattedData = [];
+
         if (this.chartType === 'heikin_ashi') {
             let haOpen = (uniqueData[0].open + uniqueData[0].close) / 2.0;
             formattedData = uniqueData.map((c, idx) => {
-                const haClose = (c.open + c.high + c.low + c.close) / 4.0;
+                const o = Number(c.open);
+                const cl = Number(c.close);
+                const h = Math.max(Number(c.high), o, cl);
+                const l = Math.min(Number(c.low), o, cl);
+                const haClose = (o + h + l + cl) / 4.0;
                 if (idx > 0) {
                     haOpen = (haOpen + formattedData[idx - 1].close) / 2.0;
                 }
-                const haHigh = Math.max(c.high, haOpen, haClose);
-                const haLow = Math.min(c.low, haOpen, haClose);
+                const haHigh = Math.max(h, haOpen, haClose);
+                const haLow = Math.min(l, haOpen, haClose);
                 return {
-                    time: c.time,
+                    time: Math.floor(c.time + tzOffset),
                     open: haOpen,
                     high: haHigh,
                     low: haLow,
@@ -441,35 +438,51 @@ class TradingChart {
             });
         } else if (['line', 'area', 'baseline'].includes(this.chartType)) {
             formattedData = uniqueData.map(c => ({
-                time: c.time,
-                value: c.close
+                time: Math.floor(c.time + tzOffset),
+                value: Number(c.close)
             }));
         } else {
             // Standard Candlestick or OHLC Bars
-            formattedData = uniqueData.map(c => ({
-                time: c.time,
-                open: c.open,
-                high: c.high,
-                low: c.low,
-                close: c.close
-            }));
+            formattedData = uniqueData.map(c => {
+                const o = Number(c.open);
+                const cl = Number(c.close);
+                const h = Math.max(Number(c.high), o, cl);
+                const l = Math.min(Number(c.low), o, cl);
+                return {
+                    time: Math.floor(c.time + tzOffset),
+                    open: o,
+                    high: h,
+                    low: l,
+                    close: cl
+                };
+            });
         }
+
+        const volData = uniqueData.map(c => ({
+            time: c.time + tzOffset,
+            value: c.volume || 1.0,
+            color: c.close >= c.open 
+                ? (this.isDarkMode ? '#064e3b88' : '#a7f3d088') 
+                : (this.isDarkMode ? '#88133788' : '#fecdd388')
+        }));
 
         try {
             this.candleSeries.setData(formattedData);
+            if (this.volumeSeries) this.volumeSeries.setData(volData);
         } catch (err) {
-            console.warn("Candle series setData warning:", err);
+            console.warn("Series setData warning:", err);
         }
 
         // Track last forming candle
         const last = uniqueData[uniqueData.length - 1];
+        const lastVol = volData[volData.length - 1];
         this.currentCandle = {
-            time: last.rawTime,
+            time: last.time,
             open: last.open,
             high: last.high,
             low: last.low,
             close: last.close,
-            volume: last.volume
+            volume: lastVol?.value || 1.0
         };
     }
 
