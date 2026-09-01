@@ -112,11 +112,17 @@ class TradingChart {
 
             // Setup crosshair move for OHLCV tracking with timezone formatting
             this.chart.subscribeCrosshairMove((param) => {
-                if (!param || !param.time || !param.seriesPrices) {
+                if (!param || !param.time) {
                     if (this.onCrosshairMoveCallback) this.onCrosshairMoveCallback(null);
                     return;
                 }
-                const candle = param.seriesPrices.get(this.candleSeries);
+                // LightweightCharts v4+ uses seriesData; fall back to seriesPrices for older builds
+                const seriesDataMap = param.seriesData || param.seriesPrices;
+                if (!seriesDataMap) {
+                    if (this.onCrosshairMoveCallback) this.onCrosshairMoveCallback(null);
+                    return;
+                }
+                const candle = seriesDataMap.get(this.candleSeries);
                 if (candle && this.onCrosshairMoveCallback) {
                     this.onCrosshairMoveCallback({
                         time: param.time,
@@ -416,26 +422,29 @@ class TradingChart {
         let formattedData = [];
 
         if (this.chartType === 'heikin_ashi') {
-            let haOpen = (uniqueData[0].open + uniqueData[0].close) / 2.0;
-            formattedData = uniqueData.map((c, idx) => {
+            // Use a for-loop so each candle's haOpen can reference the previous computed haClose
+            let prevHaOpen = (Number(uniqueData[0].open) + Number(uniqueData[0].close)) / 2.0;
+            let prevHaClose = prevHaOpen;
+            for (let idx = 0; idx < uniqueData.length; idx++) {
+                const c = uniqueData[idx];
                 const o = Number(c.open);
                 const cl = Number(c.close);
-                const h = Math.max(Number(c.high), o, cl);
-                const l = Math.min(Number(c.low), o, cl);
+                const h = Number(c.high);
+                const l = Number(c.low);
                 const haClose = (o + h + l + cl) / 4.0;
-                if (idx > 0) {
-                    haOpen = (haOpen + formattedData[idx - 1].close) / 2.0;
-                }
+                const haOpen = idx === 0 ? prevHaOpen : (prevHaOpen + prevHaClose) / 2.0;
                 const haHigh = Math.max(h, haOpen, haClose);
                 const haLow = Math.min(l, haOpen, haClose);
-                return {
+                formattedData.push({
                     time: Math.floor(c.time + tzOffset),
                     open: haOpen,
                     high: haHigh,
                     low: haLow,
                     close: haClose
-                };
-            });
+                });
+                prevHaOpen = haOpen;
+                prevHaClose = haClose;
+            }
         } else if (['line', 'area', 'baseline'].includes(this.chartType)) {
             formattedData = uniqueData.map(c => ({
                 time: Math.floor(c.time + tzOffset),
@@ -459,7 +468,7 @@ class TradingChart {
         }
 
         const volData = uniqueData.map(c => ({
-            time: c.time + tzOffset,
+            time: Math.floor(c.time + tzOffset),
             value: c.volume || 1.0,
             color: c.close >= c.open 
                 ? (this.isDarkMode ? '#064e3b88' : '#a7f3d088') 
