@@ -113,6 +113,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         <div class="h-3 w-px bg-slate-200 dark:bg-slate-800"></div>
                         <button class="pane-reset-btn flex items-center gap-1 px-2 py-0.5 rounded-full hover:bg-sky-50 dark:hover:bg-sky-950 text-[10px] font-bold text-sky-600 dark:text-sky-400 transition-transform active:scale-95" title="Reset View (TradingView)">⏭️ Reset</button>
                     </div>
+
+                    <!-- Go To Date — bottom-left, TradingView-style -->
+                    <div class="pane-goto-wrap absolute bottom-2.5 left-2.5 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto select-none">
+                        <button class="pane-goto-btn flex items-center gap-1 px-2 py-1 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 shadow-xl text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 hover:border-sky-400 transition-colors" title="Go To Date">
+                            📅 Go To
+                        </button>
+                        <div class="pane-goto-picker hidden absolute bottom-9 left-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-xl p-3 min-w-[200px]">
+                            <div class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Jump to date</div>
+                            <input type="date" class="pane-goto-input w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer" />
+                            <button class="pane-goto-submit mt-2 w-full bg-sky-500 hover:bg-sky-600 text-white text-[11px] font-bold py-1.5 rounded-lg transition-colors active:scale-95">Go →</button>
+                        </div>
+                    </div>
                 `;
 
                 grid.appendChild(paneWrapper);
@@ -185,6 +197,54 @@ document.addEventListener("DOMContentLoaded", () => {
                         paneObj.chart.resetView();
                     });
                 }
+
+                // ── Go To Date ──────────────────────────────────────────
+                const gotoBtn    = paneWrapper.querySelector(".pane-goto-btn");
+                const gotoPicker = paneWrapper.querySelector(".pane-goto-picker");
+                const gotoInput  = paneWrapper.querySelector(".pane-goto-input");
+                const gotoSubmit = paneWrapper.querySelector(".pane-goto-submit");
+
+                if (gotoBtn && gotoPicker && gotoInput && gotoSubmit) {
+                    // Pre-fill input with today's date
+                    const todayStr = new Date().toISOString().slice(0, 10);
+                    gotoInput.value = todayStr;
+                    gotoInput.max   = todayStr;
+
+                    // Toggle picker visibility
+                    gotoBtn.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        gotoPicker.classList.toggle("hidden");
+                        if (!gotoPicker.classList.contains("hidden")) {
+                            gotoInput.focus();
+                        }
+                    });
+
+                    // Submit on button click
+                    gotoSubmit.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        if (gotoInput.value) {
+                            paneObj.chart.goToDate(gotoInput.value);
+                            gotoPicker.classList.add("hidden");
+                        }
+                    });
+
+                    // Also jump on Enter key
+                    gotoInput.addEventListener("keydown", (e) => {
+                        e.stopPropagation();
+                        if (e.key === "Enter" && gotoInput.value) {
+                            paneObj.chart.goToDate(gotoInput.value);
+                            gotoPicker.classList.add("hidden");
+                        }
+                    });
+
+                    // Close picker when clicking outside
+                    document.addEventListener("click", (e) => {
+                        if (!gotoBtn.contains(e.target) && !gotoPicker.contains(e.target)) {
+                            gotoPicker.classList.add("hidden");
+                        }
+                    });
+                }
+                // ────────────────────────────────────────────────────────
 
                 const focusBtn = paneWrapper.querySelector(".pane-focus-btn");
                 focusBtn.addEventListener("click", (e) => {

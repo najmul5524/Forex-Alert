@@ -94,9 +94,9 @@ class TradingChart {
                     borderColor: isDark ? '#334155' : '#cbd5e1',
                     timeVisible: true,
                     secondsVisible: false,
-                    rightOffset: 6,
-                    barSpacing: 6,
-                    minBarSpacing: 0.5,
+                    rightOffset: 8,
+                    barSpacing: 8,
+                    minBarSpacing: 1,
                 },
                 rightPriceScale: {
                     borderColor: isDark ? '#334155' : '#cbd5e1',
@@ -280,15 +280,60 @@ class TradingChart {
         if (!this.chart) return;
         try {
             this.chart.timeScale().scrollToRealTime();
-            this.chart.timeScale().fitContent();
+            this._applyDefaultView(this.rawCandles ? this.rawCandles.length : 0);
             this.chart.applyOptions({
-                rightPriceScale: {
-                    autoScale: true
-                }
+                rightPriceScale: { autoScale: true }
             });
             this.redrawDrawings();
         } catch (e) {
             console.error("Error resetting chart view:", e);
+        }
+    }
+
+    // Show last N candles in viewport (TradingView-style default zoom)
+    _applyDefaultView(totalBars, visibleBars = 150) {
+        if (!this.chart) return;
+        try {
+            if (totalBars > visibleBars) {
+                this.chart.timeScale().setVisibleLogicalRange({
+                    from: totalBars - visibleBars,
+                    to: totalBars + 8   // rightOffset breathing room
+                });
+            } else {
+                this.chart.timeScale().fitContent();
+            }
+        } catch (e) {
+            try { this.chart.timeScale().fitContent(); } catch (_) {}
+        }
+    }
+
+    // Jump to a specific date on the chart (TradingView "Go To Date" feature)
+    goToDate(dateStr) {
+        if (!this.chart || !this.rawCandles || this.rawCandles.length === 0) return;
+        try {
+            const targetTs = Math.floor(new Date(dateStr).getTime() / 1000);
+            if (isNaN(targetTs)) return;
+
+            // Find the candle index closest to the target date
+            let closestIdx = 0;
+            let minDiff = Infinity;
+            for (let i = 0; i < this.rawCandles.length; i++) {
+                const diff = Math.abs(this.rawCandles[i].time - targetTs);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestIdx = i;
+                }
+            }
+
+            // Center that candle in view with ~80 bars each side
+            const halfView = 80;
+            this.chart.timeScale().setVisibleLogicalRange({
+                from: Math.max(0, closestIdx - halfView),
+                to: closestIdx + halfView
+            });
+            this.chart.applyOptions({ rightPriceScale: { autoScale: true } });
+        } catch (e) {
+            console.error("goToDate error:", e);
         }
     }
 
@@ -367,7 +412,7 @@ class TradingChart {
                 this.rawCandles = data;
                 this.renderCandlesData(data);
                 if (this.chart) {
-                    this.chart.timeScale().fitContent();
+                    this._applyDefaultView(data.length);
                     this.chart.applyOptions({
                         rightPriceScale: { autoScale: true }
                     });
