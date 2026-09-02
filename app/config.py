@@ -90,7 +90,7 @@ class Settings(BaseSettings):
 
     TWELVE_DATA_API_KEY: Optional[str] = ""
     FINNHUB_API_KEY: Optional[str] = ""
-    DEFAULT_FEED_SOURCE: str = "simulation"
+    SEED_AT_STARTUP: bool = False
 
     DISCORD_WEBHOOK_URL: Optional[str] = ""
     TELEGRAM_BOT_TOKEN: Optional[str] = ""

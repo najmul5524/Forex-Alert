@@ -1,9 +1,14 @@
+import os
 import time
 import math
 import random
 import re
 from typing import Dict, List, Optional, Tuple, Any
 import pandas as pd
+
+# Import settings for SEED_AT_STARTUP flag
+from app.config import settings
+
 
 DEFAULT_TIMEFRAME_SECONDS = {
     "1m": 60,
@@ -64,6 +69,24 @@ class SymbolCandleStore:
         }
         self.latest_tick_price: Optional[float] = None
         self.prev_tick_price: Optional[float] = None
+        # Store base price and volatility for lazy seeding
+        self._base_price: float = 1.0850
+        self._volatility: float = 0.0004
+
+    def set_seed_params(self, base_price: float, volatility: float) -> None:
+        """Store the parameters used for lazy seeding.
+        Called by CandleManager when a new store is created.
+        """
+        self._base_price = base_price
+        self._volatility = volatility
+
+    def ensure_candles(self, tf: str) -> None:
+        """Generate candles for the requested timeframe if not already present.
+        This triggers the full seeding routine, which populates all timeframes.
+        """
+        if not self.timeframe_candles.get(tf):
+            # Lazy seeding using stored base_price and volatility
+            self.seed_initial_candles(self._base_price, self._volatility)
 
     def seed_initial_candles(self, base_price: float = 1.0850, volatility: float = 0.0004):
         now = int(time.time())
@@ -130,6 +153,8 @@ class SymbolCandleStore:
         from_time: Optional[int] = None
     ) -> List[Candle]:
         tf = timeframe.lower().strip()
+        # Lazy‑load the timeframe if it hasn't been generated yet
+        self.ensure_candles(tf)
         sec = parse_timeframe_seconds(tf)
 
         candles = self.timeframe_candles.get(tf, [])
@@ -275,7 +300,10 @@ class CandleManager:
             if custom_base_price is not None:
                 base_p = custom_base_price
 
-            store.seed_initial_candles(base_p, vol)
+            store.set_seed_params(base_p, vol)
+            # Eagerly seed candles at startup only if flag is true
+            if settings.SEED_AT_STARTUP:
+                store.seed_initial_candles(base_p, vol)
             self.stores[sym] = store
         return self.stores[sym]
 
