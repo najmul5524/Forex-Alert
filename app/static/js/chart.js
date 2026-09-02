@@ -67,15 +67,15 @@ class TradingChart {
             const h = this.container.clientHeight || 300;
 
             this.chart = LightweightCharts.createChart(this.container, {
-                width: w,
-                height: h,
+                autoSize: true,
                 layout: {
                     background: { color: isDark ? '#0f172a' : '#ffffff' },
                     textColor: isDark ? '#94a3b8' : '#475569',
+                    fontSize: 11,
                 },
                 grid: {
-                    vertLines: { color: isDark ? '#1e293b' : '#f1f5f9' },
-                    horzLines: { color: isDark ? '#1e293b' : '#f1f5f9' },
+                    vertLines: { color: isDark ? '#1e293b' : '#f1f5f9', style: LightweightCharts.LineStyle.Solid },
+                    horzLines: { color: isDark ? '#1e293b' : '#f1f5f9', style: LightweightCharts.LineStyle.Solid },
                 },
                 crosshair: {
                     mode: LightweightCharts.CrosshairMode.Normal,
@@ -83,11 +83,13 @@ class TradingChart {
                         width: 1,
                         color: isDark ? '#64748b' : '#94a3b8',
                         style: LightweightCharts.LineStyle.Dashed,
+                        labelBackgroundColor: isDark ? '#1e293b' : '#e2e8f0',
                     },
                     horzLine: {
                         width: 1,
                         color: isDark ? '#64748b' : '#94a3b8',
                         style: LightweightCharts.LineStyle.Dashed,
+                        labelBackgroundColor: isDark ? '#1e293b' : '#e2e8f0',
                     },
                 },
                 timeScale: {
@@ -97,14 +99,28 @@ class TradingChart {
                     rightOffset: 8,
                     barSpacing: 8,
                     minBarSpacing: 1,
+                    fixLeftEdge: false,
+                    fixRightEdge: false,
                 },
                 rightPriceScale: {
                     borderColor: isDark ? '#334155' : '#cbd5e1',
                     scaleMargins: {
-                        top: 0.12,
-                        bottom: 0.12,
+                        top: 0.08,
+                        bottom: 0.08,
                     },
                     autoScale: true,
+                    entireTextOnly: true,
+                },
+                handleScroll: {
+                    mouseWheel: true,
+                    pressedMouseMove: true,
+                    horzTouchDrag: true,
+                    vertTouchDrag: false,
+                },
+                handleScale: {
+                    mouseWheel: true,
+                    pinch: true,
+                    axisPressedMouseMove: true,
                 },
             });
 
@@ -267,13 +283,9 @@ class TradingChart {
     }
 
     resize() {
-        if (!this.chart || !this.container) return;
-        const w = this.container.clientWidth;
-        const h = this.container.clientHeight;
-        if (w > 0 && h > 0) {
-            this.chart.applyOptions({ width: w, height: h });
-            this.resizeDrawingCanvas();
-        }
+        // autoSize:true means the chart manages its own dimensions.
+        // We only need to keep the drawing canvas overlay in sync.
+        this.resizeDrawingCanvas();
     }
 
     resetView() {

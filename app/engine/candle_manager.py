@@ -77,18 +77,19 @@ class SymbolCandleStore:
             dec = 4
 
         # Timeframe-specific historical depth (1 Year+ for 1h, 4h, 1d, 1w)
+        # Volatility multipliers tuned for realistic-looking candles
         tf_depths = {
-            "1w": (320, 604800, volatility * 4.0),
-            "1d": (1200, 86400, volatility * 2.5),
-            "4h": (3000, 14400, volatility * 1.6),
-            "2h": (4000, 7200, volatility * 1.3),
-            "1h": (8000, 3600, volatility * 1.1),
-            "45m": (2500, 2700, volatility * 1.0),
-            "30m": (3500, 1800, volatility * 0.9),
-            "15m": (3500, 900, volatility * 0.8),
-            "5m": (3500, 300, volatility * 0.6),
-            "3m": (3500, 180, volatility * 0.5),
-            "1m": (3500, 60, volatility * 0.4),
+            "1w": (320,  604800, volatility * 12.0),
+            "1d": (1200,  86400, volatility * 7.0),
+            "4h": (3000,  14400, volatility * 4.5),
+            "2h": (4000,   7200, volatility * 3.5),
+            "1h": (8000,   3600, volatility * 2.5),
+            "45m": (2500,  2700, volatility * 2.2),
+            "30m": (3500,  1800, volatility * 2.0),
+            "15m": (3500,   900, volatility * 1.8),
+            "5m":  (3500,   300, volatility * 1.5),
+            "3m":  (3500,   180, volatility * 1.3),
+            "1m":  (3500,    60, volatility * 1.2),
         }
 
         for tf, (num_bars, sec, tf_vol) in tf_depths.items():
@@ -103,11 +104,14 @@ class SymbolCandleStore:
                 open_p = round(prev_p, dec)
                 close_p = round(curr_p, dec)
 
-                w_up = abs(random.random() * tf_vol * 0.45)
-                w_dn = abs(random.random() * tf_vol * 0.45)
+                # Realistic wicks: 30-120% of bar body size
+                body = abs(close_p - open_p)
+                wick_factor = random.uniform(0.3, 1.2)
+                w_up = abs(random.gauss(body * wick_factor, body * 0.3))
+                w_dn = abs(random.gauss(body * wick_factor, body * 0.3))
 
                 high_p = round(max(open_p, close_p) + w_up, dec)
-                low_p = round(min(open_p, close_p) - w_dn, dec)
+                low_p  = round(min(open_p, close_p) - w_dn, dec)
                 vol = round(random.uniform(20.0, 500.0), 2)
 
                 candles_rev.append(Candle(bar_time, open_p, high_p, low_p, close_p, vol))
