@@ -138,6 +138,14 @@ class RealMarketDataService:
                     if tf == "1m":
                         store.latest_tick_price = real_bars[-1].close
                         store.prev_tick_price = real_bars[-1].open
+            # Fill in 3m, 30m, 45m, 2h from available real bars
+            if store.timeframe_candles.get("1m"):
+                for extra_tf in ["3m", "30m", "45m"]:
+                    if not store.timeframe_candles.get(extra_tf):
+                        sec = parse_timeframe_seconds(extra_tf)
+                        store.timeframe_candles[extra_tf] = store._aggregate_from_base(store.timeframe_candles["1m"], sec)
+            if store.timeframe_candles.get("1h") and not store.timeframe_candles.get("2h"):
+                store.timeframe_candles["2h"] = store._aggregate_from_base(store.timeframe_candles["1h"], 7200)
         else:
             for tf in ["1w", "1d", "1h"]:
                 real_bars = await cls.fetch_yahoo_candles(sym, interval=tf)
@@ -147,34 +155,67 @@ class RealMarketDataService:
                         store.latest_tick_price = real_bars[-1].close
                         store.prev_tick_price = real_bars[-1].open
                         cls._synthesize_sub_hour_bars(store, real_bars)
+            # Synthesize 2h and 4h from 1h bars
+            if store.timeframe_candles.get("1h"):
+                if not store.timeframe_candles.get("2h"):
+                    store.timeframe_candles["2h"] = store._aggregate_from_base(store.timeframe_candles["1h"], 7200)
+                if not store.timeframe_candles.get("4h"):
+                    store.timeframe_candles["4h"] = store._aggregate_from_base(store.timeframe_candles["1h"], 14400)
 
     @classmethod
     def _synthesize_sub_hour_bars(cls, store, hourly_bars: List[Candle]):
         if not hourly_bars:
             return
-        for sub_tf, num_sub in [("15m", 4), ("5m", 12), ("1m", 60)]:
-            sub_sec = parse_timeframe_seconds(sub_tf)
+
+        dec = 5
+        sym = store.symbol.upper()
+        if any(x in sym for x in ["JPY"]):
+            dec = 3
+        elif any(x in sym for x in ["XAU", "OIL", "BTC", "ETH", "SOL", "BNB", "SPX", "NAS", "US30"]):
+            dec = 2
+        elif any(x in sym for x in ["XAG", "XRP"]):
+            dec = 4
+
+        # Synthesize all standard intraday timeframes
+        sub_timeframes = [
+            ("45m", 2700, 45),
+            ("30m", 1800, 30),
+            ("15m", 900, 15),
+            ("5m", 300, 5),
+            ("3m", 180, 3),
+            ("1m", 60, 1),
+        ]
+
+        recent_hours = hourly_bars[-250:]
+
+        for sub_tf, sub_sec, num_min in sub_timeframes:
+            num_sub = 60 // num_min
             sub_candles: List[Candle] = []
-            
-            recent_hours = hourly_bars[-200:]
+
             for h_bar in recent_hours:
                 h_start = (h_bar.time // 3600) * 3600
                 h_open = h_bar.open
                 h_close = h_bar.close
-                h_range = h_bar.high - h_bar.low
-                
+                h_range = abs(h_bar.high - h_bar.low)
+
                 curr_open = h_open
                 for step in range(num_sub):
                     step_time = h_start + (step * sub_sec)
                     step_ratio = (step + 1) / float(num_sub)
                     step_target = h_open + (h_close - h_open) * step_ratio
                     step_close = step_target if step == num_sub - 1 else (curr_open + (step_target - curr_open) * 0.9)
-                    
-                    sub_h = max(curr_open, step_close) + (h_range * 0.05)
-                    sub_l = min(curr_open, step_close) - (h_range * 0.05)
-                    sub_v = max(10.0, h_bar.volume / float(num_sub))
-                    
-                    sub_candles.append(Candle(step_time, curr_open, sub_h, sub_l, step_close, sub_v))
+
+                    # Dynamic wick variation bounded by hour bar high/low
+                    wick_h = (h_range * 0.05) if h_range > 0 else (h_open * 0.0002)
+                    wick_l = (h_range * 0.05) if h_range > 0 else (h_open * 0.0002)
+
+                    sub_h = round(max(curr_open, step_close) + wick_h, dec)
+                    sub_l = round(min(curr_open, step_close) - wick_l, dec)
+                    sub_o = round(curr_open, dec)
+                    sub_c = round(step_close, dec)
+                    sub_v = max(10.0, round(h_bar.volume / float(num_sub), 2))
+
+                    sub_candles.append(Candle(step_time, sub_o, sub_h, sub_l, sub_c, sub_v))
                     curr_open = step_close
 
             store.timeframe_candles[sub_tf] = sub_candles

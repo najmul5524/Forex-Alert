@@ -218,6 +218,8 @@ class TradingChart {
                 precision: precision,
                 minMove: minMove,
             },
+            lastValueVisible: true,
+            priceLineVisible: true,
         };
 
         const isDark = this.isDarkMode;
@@ -261,8 +263,8 @@ class TradingChart {
                 wickVisible:      true,
                 wickUpColor:      '#26a69a',
                 wickDownColor:    '#ef5350',
-                lastValueVisible: false,        // price scale label only, no floating body label
-                priceLineVisible: false,
+                lastValueVisible: true,         // Live price tag on right scale
+                priceLineVisible: true,         // Horizontal price line
             });
         }
     }
@@ -414,6 +416,7 @@ class TradingChart {
     async loadCandles(symbol, timeframe) {
         this.currentSymbol = symbol;
         this.currentTimeframe = timeframe;
+        this.currentCandle = null;
         this.createMainSeries(this.chartType);
         if (!this.candleSeries) return;
 
@@ -585,13 +588,14 @@ class TradingChart {
             const volume = tickData.volume || 1.0;
             const tzOffset = this.timezoneOffsetSeconds || 0;
 
-            if (!this.currentCandle || bucket > this.currentCandle.time) {
-                // New bar for the active timeframe has opened
+            if (!this.currentCandle || bucket > this.currentCandle.time || bucket < this.currentCandle.time) {
+                // New bar opened or timeframe switched: start forming bar for current bucket
+                const prevClose = this.currentCandle ? this.currentCandle.close : price;
                 this.currentCandle = {
                     time: bucket,
-                    open: price,
-                    high: price,
-                    low: price,
+                    open: bucket === this.currentCandle?.time ? this.currentCandle.open : prevClose,
+                    high: Math.max(price, prevClose),
+                    low: Math.min(price, prevClose),
                     close: price,
                     volume: volume
                 };

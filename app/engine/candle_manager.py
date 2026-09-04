@@ -82,11 +82,17 @@ class SymbolCandleStore:
 
     def ensure_candles(self, tf: str) -> None:
         """Generate candles for the requested timeframe if not already present.
-        This triggers the full seeding routine, which populates all timeframes.
+        Only seeds artificial candles if NO candles exist across any timeframe.
         """
-        if not self.timeframe_candles.get(tf):
-            # Lazy seeding using stored base_price and volatility
-            self.seed_initial_candles(self._base_price, self._volatility)
+        if self.timeframe_candles.get(tf):
+            return
+
+        # If any real or seeded candles exist in 1m or 1h, do not seed random walks
+        has_any_data = any(len(c) > 0 for c in self.timeframe_candles.values())
+        if not has_any_data:
+            # Cold start: Seed using latest price or base_price
+            seed_p = self.latest_tick_price or self._base_price
+            self.seed_initial_candles(seed_p, self._volatility)
 
     def seed_initial_candles(self, base_price: float = 1.0850, volatility: float = 0.0004):
         now = int(time.time())
@@ -115,8 +121,9 @@ class SymbolCandleStore:
             "1m":  (3500,    60, volatility * 1.2),
         }
 
+        anchor_price = self.latest_tick_price or base_price
         for tf, (num_bars, sec, tf_vol) in tf_depths.items():
-            curr_p = base_price
+            curr_p = anchor_price
             candles_rev: List[Candle] = []
 
             for i in range(num_bars):
@@ -142,8 +149,25 @@ class SymbolCandleStore:
 
             self.timeframe_candles[tf] = list(reversed(candles_rev))
 
-        self.latest_tick_price = round(base_price, dec)
-        self.prev_tick_price = round(base_price, dec)
+        self.latest_tick_price = round(anchor_price, dec)
+        self.prev_tick_price = round(anchor_price, dec)
+
+    def _aggregate_from_base(self, base_candles: List[Candle], sec: int) -> List[Candle]:
+        """Aggregate lower-timeframe bars into a higher timeframe."""
+        if not base_candles:
+            return []
+        bars_map: Dict[int, Candle] = {}
+        for c in base_candles:
+            bucket = (c.time // sec) * sec
+            if bucket not in bars_map:
+                bars_map[bucket] = Candle(bucket, c.open, c.high, c.low, c.close, c.volume)
+            else:
+                b = bars_map[bucket]
+                b.high = max(b.high, c.high)
+                b.low = min(b.low, c.low)
+                b.close = c.close
+                b.volume = round(b.volume + c.volume, 2)
+        return sorted(bars_map.values(), key=lambda x: x.time)
 
     def get_candles(
         self, 
@@ -153,30 +177,26 @@ class SymbolCandleStore:
         from_time: Optional[int] = None
     ) -> List[Candle]:
         tf = timeframe.lower().strip()
-        # Lazy‑load the timeframe if it hasn't been generated yet
-        self.ensure_candles(tf)
         sec = parse_timeframe_seconds(tf)
 
         candles = self.timeframe_candles.get(tf, [])
-        if not candles and tf not in DEFAULT_TIMEFRAME_SECONDS:
-            # On-the-fly dynamic aggregation for custom arbitrary timeframes (e.g. 7m, 3h)
+        if not candles:
+            # Check if we can aggregate from 1m bars
             base_1m = self.timeframe_candles.get("1m", [])
-            if not base_1m:
-                return []
+            if base_1m and sec >= 60 and sec % 60 == 0:
+                candles = self._aggregate_from_base(base_1m, sec)
+                self.timeframe_candles[tf] = candles
+            elif sec >= 3600 and sec % 3600 == 0:
+                # Check if we can aggregate from 1h bars
+                base_1h = self.timeframe_candles.get("1h", [])
+                if base_1h:
+                    candles = self._aggregate_from_base(base_1h, sec)
+                    self.timeframe_candles[tf] = candles
 
-            bars_map: Dict[int, Candle] = {}
-            for c in base_1m:
-                bucket = (c.time // sec) * sec
-                if bucket not in bars_map:
-                    bars_map[bucket] = Candle(bucket, c.open, c.high, c.low, c.close, c.volume)
-                else:
-                    b = bars_map[bucket]
-                    b.high = max(b.high, c.high)
-                    b.low = min(b.low, c.low)
-                    b.close = c.close
-                    b.volume += c.volume
-            candles = list(bars_map.values())
-            self.timeframe_candles[tf] = candles
+        # If still empty, ensure_candles handles cold seeding if needed
+        if not candles:
+            self.ensure_candles(tf)
+            candles = self.timeframe_candles.get(tf, [])
 
         if to_time is not None:
             candles = [c for c in candles if c.time < to_time]
@@ -206,7 +226,11 @@ class SymbolCandleStore:
 
         events = []
 
-        for tf, sec in list(DEFAULT_TIMEFRAME_SECONDS.items()):
+        # Include standard timeframes plus any cached custom timeframes
+        active_tfs = set(DEFAULT_TIMEFRAME_SECONDS.keys()) | set(self.timeframe_candles.keys())
+
+        for tf in active_tfs:
+            sec = parse_timeframe_seconds(tf)
             bucket_time = (timestamp // sec) * sec
             candles = self.timeframe_candles.setdefault(tf, [])
 

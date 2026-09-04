@@ -746,10 +746,20 @@ document.addEventListener("DOMContentLoaded", () => {
             const cEl = document.getElementById("ohlcv-c");
             const volEl = document.getElementById("ohlcv-vol");
 
-            if (oEl) oEl.textContent = bar.open?.toFixed(4) || "--";
-            if (hEl) hEl.textContent = bar.high?.toFixed(4) || "--";
-            if (lEl) lEl.textContent = bar.low?.toFixed(4) || "--";
-            if (cEl) cEl.textContent = bar.close?.toFixed(4) || "--";
+            const symMeta = this.symbols.find(s => s.symbol === this.symbol);
+            let dec = symMeta ? symMeta.decimals : 5;
+            if (dec === undefined) {
+                const s = (this.symbol || "").toUpperCase();
+                if (["USDJPY", "EURJPY", "GBPJPY"].includes(s)) dec = 3;
+                else if (["XAUUSD", "USOIL", "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "SPX500", "NAS100", "US30"].includes(s)) dec = 2;
+                else if (["XRPUSDT", "XAGUSD"].includes(s)) dec = 4;
+                else dec = 5;
+            }
+
+            if (oEl) oEl.textContent = bar.open !== undefined ? Number(bar.open).toFixed(dec) : "--";
+            if (hEl) hEl.textContent = bar.high !== undefined ? Number(bar.high).toFixed(dec) : "--";
+            if (lEl) lEl.textContent = bar.low !== undefined ? Number(bar.low).toFixed(dec) : "--";
+            if (cEl) cEl.textContent = bar.close !== undefined ? Number(bar.close).toFixed(dec) : "--";
             if (volEl) volEl.textContent = (bar.volume || 0).toFixed(1);
         },
 
