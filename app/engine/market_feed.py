@@ -137,9 +137,13 @@ class MarketFeedEngine:
         if not alerts:
             return
 
+        # Cache DataFrames per timeframe for this tick to avoid duplicate pandas allocations
+        dfs_by_tf: Dict[str, pd.DataFrame] = {}
         for alert in list(alerts):
             tf = alert.get("timeframe") or "1m"
-            df = store.get_dataframe(tf)
+            if tf not in dfs_by_tf:
+                dfs_by_tf[tf] = store.get_dataframe(tf, limit=300)
+            df = dfs_by_tf[tf]
             curr_candle = store.get_latest_candle(tf)
             curr_bar_time = curr_candle.time if curr_candle else int(time.time())
 
@@ -265,7 +269,8 @@ class MarketFeedEngine:
 
     async def _populate_real_history_worker(self):
         try:
-            await asyncio.sleep(4) # Let server bind port and start accepting traffic immediately
+            await asyncio.sleep(5) # Let server bind port and start accepting traffic immediately
+            import gc
             from app.engine.real_market_data import real_market_data
             for s in SUPPORTED_SYMBOLS:
                 if not self.is_running:
@@ -276,7 +281,8 @@ class MarketFeedEngine:
                     logger.info(f"Loaded authentic real market history for {sym}")
                 except Exception as e:
                     logger.debug(f"Could not load real history for {sym}: {e}")
-                await asyncio.sleep(1.0)
+                gc.collect()
+                await asyncio.sleep(2.0)
         except Exception as e:
             logger.error(f"Error in real history worker: {e}")
 

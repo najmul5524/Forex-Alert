@@ -76,13 +76,13 @@ class RealMarketDataService:
             range_str = "5d" if y_int == "1m" else "30d"
         elif interval in ["1h", "2h", "4h"]:
             y_int = "1h"
-            range_str = "730d" # 2 full years of 1-hour candles
+            range_str = "60d" # 60 days of 1-hour candles (~1,440 candles)
         elif interval == "1d":
             y_int = "1d"
-            range_str = "5y"  # 5 years of daily candles
+            range_str = "2y"  # 2 years of daily candles (~500 candles)
         elif interval == "1w":
             y_int = "1wk"
-            range_str = "10y" # 10 years of weekly candles
+            range_str = "5y"  # 5 years of weekly candles (~260 candles)
 
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_sym}?interval={y_int}&range={range_str}"
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
@@ -134,7 +134,7 @@ class RealMarketDataService:
             for tf in ["1w", "1d", "4h", "1h", "15m", "5m", "1m"]:
                 real_bars = await cls.fetch_binance_klines(sym, interval=tf, limit=1000)
                 if real_bars and len(real_bars) > 10:
-                    store.timeframe_candles[tf] = real_bars
+                    store.timeframe_candles[tf] = real_bars[-store.max_bars:]
                     if tf == "1m":
                         store.latest_tick_price = real_bars[-1].close
                         store.prev_tick_price = real_bars[-1].open
@@ -143,14 +143,14 @@ class RealMarketDataService:
                 for extra_tf in ["3m", "30m", "45m"]:
                     if not store.timeframe_candles.get(extra_tf):
                         sec = parse_timeframe_seconds(extra_tf)
-                        store.timeframe_candles[extra_tf] = store._aggregate_from_base(store.timeframe_candles["1m"], sec)
+                        store.timeframe_candles[extra_tf] = store._aggregate_from_base(store.timeframe_candles["1m"], sec)[-store.max_bars:]
             if store.timeframe_candles.get("1h") and not store.timeframe_candles.get("2h"):
-                store.timeframe_candles["2h"] = store._aggregate_from_base(store.timeframe_candles["1h"], 7200)
+                store.timeframe_candles["2h"] = store._aggregate_from_base(store.timeframe_candles["1h"], 7200)[-store.max_bars:]
         else:
             for tf in ["1w", "1d", "1h"]:
                 real_bars = await cls.fetch_yahoo_candles(sym, interval=tf)
                 if real_bars and len(real_bars) > 10:
-                    store.timeframe_candles[tf] = real_bars
+                    store.timeframe_candles[tf] = real_bars[-store.max_bars:]
                     if tf == "1h":
                         store.latest_tick_price = real_bars[-1].close
                         store.prev_tick_price = real_bars[-1].open
@@ -158,9 +158,9 @@ class RealMarketDataService:
             # Synthesize 2h and 4h from 1h bars
             if store.timeframe_candles.get("1h"):
                 if not store.timeframe_candles.get("2h"):
-                    store.timeframe_candles["2h"] = store._aggregate_from_base(store.timeframe_candles["1h"], 7200)
+                    store.timeframe_candles["2h"] = store._aggregate_from_base(store.timeframe_candles["1h"], 7200)[-store.max_bars:]
                 if not store.timeframe_candles.get("4h"):
-                    store.timeframe_candles["4h"] = store._aggregate_from_base(store.timeframe_candles["1h"], 14400)
+                    store.timeframe_candles["4h"] = store._aggregate_from_base(store.timeframe_candles["1h"], 14400)[-store.max_bars:]
 
     @classmethod
     def _synthesize_sub_hour_bars(cls, store, hourly_bars: List[Candle]):
@@ -186,7 +186,7 @@ class RealMarketDataService:
             ("1m", 60, 1),
         ]
 
-        recent_hours = hourly_bars[-250:]
+        recent_hours = hourly_bars[-25:]
 
         for sub_tf, sub_sec, num_min in sub_timeframes:
             num_sub = 60 // num_min
@@ -218,6 +218,6 @@ class RealMarketDataService:
                     sub_candles.append(Candle(step_time, sub_o, sub_h, sub_l, sub_c, sub_v))
                     curr_open = step_close
 
-            store.timeframe_candles[sub_tf] = sub_candles
+            store.timeframe_candles[sub_tf] = sub_candles[-store.max_bars:]
 
 real_market_data = RealMarketDataService()

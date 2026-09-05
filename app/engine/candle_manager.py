@@ -42,6 +42,8 @@ def parse_timeframe_seconds(tf_str: str) -> int:
     return 60
 
 class Candle:
+    __slots__ = ("time", "open", "high", "low", "close", "volume")
+
     def __init__(self, time: int, open: float, high: float, low: float, close: float, volume: float = 0.0):
         self.time = int(time)
         self.open = float(open)
@@ -61,7 +63,7 @@ class Candle:
         }
 
 class SymbolCandleStore:
-    def __init__(self, symbol: str, max_bars: int = 20000):
+    def __init__(self, symbol: str, max_bars: int = 1500):
         self.symbol = symbol
         self.max_bars = max_bars
         self.timeframe_candles: Dict[str, List[Candle]] = {
@@ -105,20 +107,20 @@ class SymbolCandleStore:
         elif any(x in sym for x in ["XAG", "XRP"]):
             dec = 4
 
-        # Timeframe-specific historical depth (1 Year+ for 1h, 4h, 1d, 1w)
+        # Memory-optimized historical depth (safe for 512MB RAM budget)
         # Volatility multipliers tuned for realistic-looking candles
         tf_depths = {
-            "1w": (320,  604800, volatility * 12.0),
-            "1d": (1200,  86400, volatility * 7.0),
-            "4h": (3000,  14400, volatility * 4.5),
-            "2h": (4000,   7200, volatility * 3.5),
-            "1h": (8000,   3600, volatility * 2.5),
-            "45m": (2500,  2700, volatility * 2.2),
-            "30m": (3500,  1800, volatility * 2.0),
-            "15m": (3500,   900, volatility * 1.8),
-            "5m":  (3500,   300, volatility * 1.5),
-            "3m":  (3500,   180, volatility * 1.3),
-            "1m":  (3500,    60, volatility * 1.2),
+            "1w": (100,  604800, volatility * 12.0),
+            "1d": (365,  86400, volatility * 7.0),
+            "4h": (500,  14400, volatility * 4.5),
+            "2h": (500,   7200, volatility * 3.5),
+            "1h": (750,   3600, volatility * 2.5),
+            "45m": (500,  2700, volatility * 2.2),
+            "30m": (500,  1800, volatility * 2.0),
+            "15m": (500,   900, volatility * 1.8),
+            "5m":  (500,   300, volatility * 1.5),
+            "3m":  (500,   180, volatility * 1.3),
+            "1m":  (1000,   60, volatility * 1.2),
         }
 
         anchor_price = self.latest_tick_price or base_price
@@ -261,7 +263,7 @@ class SymbolCandleStore:
         candles = self.get_candles(timeframe, limit=1)
         return candles[-1] if candles else None
 
-    def get_dataframe(self, timeframe: str = "1m", limit: int = 500) -> pd.DataFrame:
+    def get_dataframe(self, timeframe: str = "1m", limit: int = 300) -> pd.DataFrame:
         candles = self.get_candles(timeframe, limit=limit)
         if not candles:
             return pd.DataFrame(columns=["time", "open", "high", "low", "close", "volume"])
