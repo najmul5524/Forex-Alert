@@ -60,6 +60,11 @@ app.include_router(notifications_router)
 app.include_router(settings_router)
 app.include_router(download_router)
 
+@app.get("/health")
+@app.get("/ping")
+async def health_check():
+    return {"status": "ok", "app": settings.APP_NAME}
+
 @app.get("/", response_class=HTMLResponse)
 async def get_dashboard(request: Request):
     return templates.TemplateResponse(
