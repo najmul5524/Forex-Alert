@@ -1,4 +1,4 @@
-﻿from typing import List, Optional
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
@@ -9,6 +9,7 @@ from app.schemas.alert import AlertCreate, AlertUpdate, AlertResponse
 from app.schemas.trigger_log import TriggerLogResponse
 from app.notifications.dispatcher import dispatch_alert_notifications
 from app.engine.candle_manager import candle_manager
+from app.engine.market_feed import market_feed
 
 router = APIRouter(prefix="/api/alerts", tags=["Alerts"])
 
@@ -45,6 +46,7 @@ async def create_alert(alert_in: AlertCreate, db: AsyncSession = Depends(get_db)
     db.add(alert)
     await db.commit()
     await db.refresh(alert)
+    await market_feed.reload_alerts_cache()
     return alert
 
 @router.get("/{alert_id}", response_model=AlertResponse)
@@ -69,6 +71,7 @@ async def update_alert(alert_id: int, alert_in: AlertUpdate, db: AsyncSession = 
 
     await db.commit()
     await db.refresh(alert)
+    await market_feed.reload_alerts_cache()
     return alert
 
 @router.delete("/{alert_id}")
@@ -78,6 +81,7 @@ async def delete_alert(alert_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Alert not found")
     await db.delete(alert)
     await db.commit()
+    await market_feed.reload_alerts_cache()
     return {"status": "deleted", "id": alert_id}
 
 @router.post("/{alert_id}/toggle", response_model=AlertResponse)
@@ -88,6 +92,7 @@ async def toggle_alert(alert_id: int, db: AsyncSession = Depends(get_db)):
     alert.is_active = not alert.is_active
     await db.commit()
     await db.refresh(alert)
+    await market_feed.reload_alerts_cache()
     return alert
 
 @router.post("/{alert_id}/test-trigger")

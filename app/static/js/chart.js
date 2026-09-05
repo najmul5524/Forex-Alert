@@ -632,20 +632,23 @@ class TradingChart {
                 });
             }
 
-            // ── Real-time indicator auto-sync ─────────────────────────────
-            // Merge the live candle into rawCandles so indicators see the latest price
+            // ── Real-time indicator sync ─────────────────────────────────
+            // Merge the live candle into rawCandles so chart state stays consistent
             if (this.rawCandles && this.rawCandles.length > 0) {
                 const lastRaw = this.rawCandles[this.rawCandles.length - 1];
+                let isNewBar = false;
                 if (lastRaw.time === this.currentCandle.time) {
                     // Update the live candle in place
                     this.rawCandles[this.rawCandles.length - 1] = { ...this.currentCandle };
                 } else if (this.currentCandle.time > lastRaw.time) {
-                    // New bar — append it
+                    // New bar formed
                     this.rawCandles.push({ ...this.currentCandle });
+                    isNewBar = true;
                 }
-                // Throttle indicator refresh to once per second
+
+                // Refresh indicators only when a new bar appears or every 15 seconds (prevents HTTP spam)
                 const nowMs = Date.now();
-                if (!this._lastIndRefresh || nowMs - this._lastIndRefresh >= 1000) {
+                if (isNewBar || !this._lastIndRefresh || (nowMs - this._lastIndRefresh >= 15000)) {
                     this._lastIndRefresh = nowMs;
                     if (this.indicators && this.indicators.length > 0) {
                         this.refreshAllIndicators().catch(() => {});

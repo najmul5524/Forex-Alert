@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import json
 import logging
 import random
@@ -54,9 +55,52 @@ class MarketFeedEngine:
         self.active_symbols: Set[str] = {s["symbol"] for s in SUPPORTED_SYMBOLS}
         self.ws_broadcast_callback = None
         self._symbol_map = {s["symbol"]: s for s in SUPPORTED_SYMBOLS}
+        self._active_alerts_cache: Dict[str, List[dict]] = {}
 
     def set_broadcast_callback(self, cb):
         self.ws_broadcast_callback = cb
+
+    async def reload_alerts_cache(self):
+        """Loads all active alerts into memory to eliminate per-tick DB queries."""
+        try:
+            async with AsyncSessionLocal() as session:
+                stmt = select(Alert).where(Alert.is_active == True)
+                alerts = (await session.execute(stmt)).scalars().all()
+                new_cache: Dict[str, List[dict]] = {}
+                for a in alerts:
+                    sym = (a.symbol or "").upper().replace("/", "").replace("-", "")
+                    alert_dict = {
+                        "id": a.id,
+                        "condition_type": a.condition_type,
+                        "params": a.params or {},
+                        "symbol": sym,
+                        "timeframe": a.timeframe or "1m",
+                        "trigger_frequency": a.trigger_frequency,
+                        "cooldown_minutes": a.cooldown_minutes or 5,
+                        "last_triggered_at": a.last_triggered_at,
+                        "last_evaluated_bar_time": a.last_evaluated_bar_time,
+                        "channels": a.channels or ["in_app"],
+                        "target_email": a.target_email,
+                        "webhook_url": a.webhook_url,
+                        "message": a.message
+                    }
+                    new_cache.setdefault(sym, []).append(alert_dict)
+                self._active_alerts_cache = new_cache
+                logger.info(f"MarketFeed alert cache refreshed: {sum(len(v) for v in new_cache.values())} active alerts loaded.")
+        except Exception as e:
+            logger.error(f"Failed to reload alert cache: {e}")
+
+    def update_cached_alert_after_trigger(self, alert_id: int, now_utc, current_bar_time: int, should_deactivate: bool):
+        """Update in-memory alert state instantly after a trigger without DB wait."""
+        for sym, alerts in self._active_alerts_cache.items():
+            for a in alerts:
+                if a.get("id") == alert_id:
+                    if should_deactivate:
+                        alerts.remove(a)
+                    else:
+                        a["last_triggered_at"] = now_utc
+                        a["last_evaluated_bar_time"] = current_bar_time
+                    return
 
     async def process_tick(self, symbol: str, price: float, volume: float = 1.0):
         sym = symbol.upper().replace("/", "").replace("-", "")
@@ -88,55 +132,50 @@ class MarketFeedEngine:
             except Exception as e:
                 logger.debug(f"Broadcast tick error: {e}")
 
-        async with AsyncSessionLocal() as session:
-            stmt = select(Alert).where(Alert.symbol == sym, Alert.is_active == True)
-            alerts = (await session.execute(stmt)).scalars().all()
-            if not alerts:
-                return
+        # Check in-memory alert cache (Zero SQLite database I/O per tick)
+        alerts = self._active_alerts_cache.get(sym)
+        if not alerts:
+            return
 
-            for alert in alerts:
-                tf = alert.timeframe or "1m"
-                df = store.get_dataframe(tf)
-                curr_candle = store.get_latest_candle(tf)
-                curr_bar_time = curr_candle.time if curr_candle else int(time.time())
+        for alert in list(alerts):
+            tf = alert.get("timeframe") or "1m"
+            df = store.get_dataframe(tf)
+            curr_candle = store.get_latest_candle(tf)
+            curr_bar_time = curr_candle.time if curr_candle else int(time.time())
 
-                is_close_event = any(e[0] == tf and e[1] for e in events)
+            is_close_event = any(e[0] == tf and e[1] for e in events)
 
-                alert_dict = {
-                    "condition_type": alert.condition_type,
-                    "params": alert.params or {},
-                    "symbol": sym,
-                    "timeframe": tf,
-                    "trigger_frequency": alert.trigger_frequency,
-                    "cooldown_minutes": alert.cooldown_minutes,
-                    "last_triggered_at": alert.last_triggered_at,
-                    "last_evaluated_bar_time": alert.last_evaluated_bar_time
-                }
+            result = evaluate_alert_condition(
+                alert_dict=alert,
+                candles_df=df,
+                prev_tick_price=store.prev_tick_price,
+                current_price=price,
+                current_bar_time=curr_bar_time,
+                is_bar_close=is_close_event
+            )
 
-                result = evaluate_alert_condition(
-                    alert_dict=alert_dict,
-                    candles_df=df,
-                    prev_tick_price=store.prev_tick_price,
-                    current_price=price,
+            if result.triggered:
+                logger.info(f"ALERT TRIGGERED: {result.summary}")
+                # Instantly reflect in cache to prevent duplicate rapid firings
+                self.update_cached_alert_after_trigger(
+                    alert_id=alert["id"],
+                    now_utc=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
                     current_bar_time=curr_bar_time,
-                    is_bar_close=is_close_event
+                    should_deactivate=result.should_deactivate
                 )
-
-                if result.triggered:
-                    logger.info(f"ALERT TRIGGERED: {result.summary}")
-                    asyncio.create_task(dispatch_alert_notifications(
-                        alert_id=alert.id,
-                        symbol=sym,
-                        timeframe=tf,
-                        summary=result.summary,
-                        trigger_price=price,
-                        channels=alert.channels or ["in_app"],
-                        target_email=alert.target_email,
-                        webhook_url=alert.webhook_url,
-                        custom_message=alert.message,
-                        should_deactivate=result.should_deactivate,
-                        current_bar_time=curr_bar_time
-                    ))
+                asyncio.create_task(dispatch_alert_notifications(
+                    alert_id=alert["id"],
+                    symbol=sym,
+                    timeframe=tf,
+                    summary=result.summary,
+                    trigger_price=price,
+                    channels=alert.get("channels") or ["in_app"],
+                    target_email=alert.get("target_email"),
+                    webhook_url=alert.get("webhook_url"),
+                    custom_message=alert.get("message"),
+                    should_deactivate=result.should_deactivate,
+                    current_bar_time=curr_bar_time
+                ))
 
     async def _binance_stream_worker(self):
         crypto_pairs = ["btcusdt", "ethusdt", "solusdt", "bnbusdt", "xrpusdt"]
@@ -219,10 +258,10 @@ class MarketFeedEngine:
                     vol_amt = random.uniform(1.0, 20.0)
                     await self.process_tick(sym, new_p, vol_amt)
                     
-                await asyncio.sleep(1.2)
+                await asyncio.sleep(2.0)
             except Exception as e:
                 logger.error(f"Simulation worker error: {e}")
-                await asyncio.sleep(1)
+                await asyncio.sleep(1.5)
 
     async def _populate_real_history_worker(self):
         try:
@@ -247,6 +286,9 @@ class MarketFeedEngine:
         self.is_running = True
         logger.info("Starting Market Feed Engine...")
         
+        # Load active alerts into memory
+        await self.reload_alerts_cache()
+
         self.tasks.append(asyncio.create_task(self._simulation_worker()))
         self.tasks.append(asyncio.create_task(self._binance_stream_worker()))
         self.tasks.append(asyncio.create_task(self._forex_polling_worker()))
