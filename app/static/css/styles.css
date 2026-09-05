@@ -112,3 +112,44 @@ body > main {
     from { transform: translateY(8px); opacity: 0; }
     to   { transform: translateY(0);   opacity: 1; }
 }
+
+/* ── Hover-Only Floating Chart Controls ── */
+/* When cursor enters the chart section or pane, controls fade in cleanly */
+.chart-hover-controls {
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, 6px);
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+section:hover > .chart-hover-controls {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: translate(-50%, 0);
+}
+
+.pane-floating-nav {
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, 6px);
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.group:hover .pane-floating-nav {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: translate(-50%, 0);
+}
+
+.pane-goto-wrap {
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.group:hover .pane-goto-wrap {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: translateY(0);
+}

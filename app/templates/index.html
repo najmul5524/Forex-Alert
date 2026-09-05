@@ -171,13 +171,31 @@
             </label>
         </div>
 
-        <!-- OHLCV Live Header Readout -->
-        <div id="ohlcv-readout" class="hidden md:flex items-center gap-3 text-[11px] font-mono text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-950 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
-            <span>O: <strong class="text-slate-900 dark:text-white" id="ohlcv-o">--</strong></span>
-            <span>H: <strong class="text-emerald-600 dark:text-emerald-400" id="ohlcv-h">--</strong></span>
-            <span>L: <strong class="text-rose-600 dark:text-rose-400" id="ohlcv-l">--</strong></span>
-            <span>C: <strong class="text-slate-900 dark:text-white" id="ohlcv-c">--</strong></span>
-            <span>Vol: <strong class="text-sky-600 dark:text-sky-400" id="ohlcv-vol">--</strong></span>
+        <!-- RIGHT CONTROLS: COLORFUL TIMEZONE SELECTOR & OHLCV READOUT -->
+        <div class="flex items-center gap-2.5">
+            <!-- Colorful Outside Timezone Selector -->
+            <div class="flex items-center gap-1.5 bg-gradient-to-r from-amber-500/10 via-sky-500/10 to-indigo-500/10 dark:from-amber-400/15 dark:via-sky-400/15 dark:to-indigo-400/15 px-2.5 py-1 rounded-lg border border-sky-300/40 dark:border-sky-500/30 shadow-sm transition-all hover:border-sky-400">
+                <span class="text-xs animate-pulse">🌍</span>
+                <span class="text-[10px] uppercase font-extrabold tracking-wider bg-gradient-to-r from-amber-500 to-sky-500 dark:from-amber-400 dark:to-sky-400 bg-clip-text text-transparent">TZ:</span>
+                <select id="chart-timezone-select" class="bg-transparent font-extrabold text-[11px] text-sky-700 dark:text-sky-300 cursor-pointer focus:outline-none pr-1">
+                    <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="0">UTC (London / +0)</option>
+                    <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="-5">UTC-5 (New York / EDT)</option>
+                    <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="1">UTC+1 (Frankfurt / CET)</option>
+                    <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="4">UTC+4 (Dubai / GST)</option>
+                    <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="6" selected>UTC+6 (Dhaka / BST)</option>
+                    <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="8">UTC+8 (Singapore / HKT)</option>
+                    <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="9">UTC+9 (Tokyo / JST)</option>
+                </select>
+            </div>
+
+            <!-- OHLCV Live Header Readout -->
+            <div id="ohlcv-readout" class="hidden md:flex items-center gap-3 text-[11px] font-mono text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-950 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+                <span>O: <strong class="text-slate-900 dark:text-white" id="ohlcv-o">--</strong></span>
+                <span>H: <strong class="text-emerald-600 dark:text-emerald-400" id="ohlcv-h">--</strong></span>
+                <span>L: <strong class="text-rose-600 dark:text-rose-400" id="ohlcv-l">--</strong></span>
+                <span>C: <strong class="text-slate-900 dark:text-white" id="ohlcv-c">--</strong></span>
+                <span>Vol: <strong class="text-sky-600 dark:text-sky-400" id="ohlcv-vol">--</strong></span>
+            </div>
         </div>
     </div>
 
@@ -215,35 +233,21 @@
                 <!-- Dynamically populated chart panes -->
             </div>
 
-            <!-- TradingView Floating Center Navigation Toolbar (Invisible by default, visible on hover) -->
-            <div id="chart-floating-nav" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-800 shadow-xl select-none pointer-events-auto">
+            <!-- TradingView Floating Center Navigation Toolbar (Appears cleanly when hovering chart area) -->
+            <div id="chart-floating-nav" class="chart-hover-controls absolute bottom-4 left-1/2 -translate-x-1/2 z-30 opacity-0 pointer-events-none transition-all duration-200 flex items-center gap-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-200/90 dark:border-slate-800/90 shadow-2xl select-none">
                 <!-- Zoom In Button -->
-                <button id="chart-zoom-in-btn" class="flex items-center justify-center w-7 h-7 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-xs text-slate-700 dark:text-slate-200 transition-transform active:scale-90 cursor-pointer" title="Zoom In (TradingView)">
+                <button id="chart-zoom-in-btn" class="flex items-center justify-center w-7 h-7 rounded-full hover:bg-sky-50 dark:hover:bg-slate-800 text-xs text-slate-700 dark:text-slate-200 transition-transform active:scale-90 cursor-pointer" title="Zoom In (TradingView)">
                     <span>➕</span>
                 </button>
                 <!-- Zoom Out Button -->
-                <button id="chart-zoom-out-btn" class="flex items-center justify-center w-7 h-7 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-xs text-slate-700 dark:text-slate-200 transition-transform active:scale-90 cursor-pointer" title="Zoom Out (TradingView)">
+                <button id="chart-zoom-out-btn" class="flex items-center justify-center w-7 h-7 rounded-full hover:bg-sky-50 dark:hover:bg-slate-800 text-xs text-slate-700 dark:text-slate-200 transition-transform active:scale-90 cursor-pointer" title="Zoom Out (TradingView)">
                     <span>➖</span>
                 </button>
-                <div class="h-3.5 w-px bg-slate-200 dark:bg-slate-800"></div>
+                <div class="h-3.5 w-px bg-slate-200 dark:bg-slate-700"></div>
                 <!-- Reset View Button -->
-                <button id="chart-reset-btn" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-sky-50 dark:hover:bg-sky-950/50 text-[11px] font-bold text-sky-600 dark:text-sky-400 transition-transform active:scale-95 cursor-pointer" title="Reset Chart View (TradingView)">
+                <button id="chart-reset-btn" class="flex items-center gap-1 px-3 py-1 rounded-full bg-sky-500/10 hover:bg-sky-500/20 text-[11px] font-bold text-sky-600 dark:text-sky-400 border border-sky-400/20 transition-transform active:scale-95 cursor-pointer" title="Reset Chart View (TradingView)">
                     <span>⏭️</span> <span>Reset</span>
                 </button>
-            </div>
-
-            <!-- Bottom-Right Timezone Selector -->
-            <div class="absolute bottom-3 right-3 z-30 flex items-center bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-md text-xs select-none">
-                <span class="text-slate-400 mr-1.5 text-[11px]">🌍</span>
-                <select id="chart-timezone-select" class="bg-transparent font-bold text-slate-800 dark:text-slate-200 cursor-pointer focus:outline-none text-[11px]">
-                    <option value="0">UTC (London / +0)</option>
-                    <option value="-5">UTC-5 (New York / EDT)</option>
-                    <option value="1">UTC+1 (Frankfurt / CET)</option>
-                    <option value="4">UTC+4 (Dubai / GST)</option>
-                    <option value="6" selected>UTC+6 (Dhaka / BST)</option>
-                    <option value="8">UTC+8 (Singapore / HKT)</option>
-                    <option value="9">UTC+9 (Tokyo / JST)</option>
-                </select>
             </div>
         </section>
 

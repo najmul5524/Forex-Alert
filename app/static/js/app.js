@@ -106,17 +106,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
                     <div id="${paneId}" class="flex-1 relative w-full h-full min-h-0"></div>
 
-                    <!-- TradingView Bottom-Center Floating Navigation Toolbar (Invisible by default, appears on hover) -->
-                    <div class="pane-floating-nav absolute bottom-2.5 left-1/2 -translate-x-1/2 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-800 shadow-xl select-none pointer-events-auto">
-                        <button class="pane-zoom-in-btn flex items-center justify-center w-6 h-6 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-[10px] text-slate-700 dark:text-slate-200 transition-transform active:scale-90" title="Zoom In (TradingView)">➕</button>
-                        <button class="pane-zoom-out-btn flex items-center justify-center w-6 h-6 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-[10px] text-slate-700 dark:text-slate-200 transition-transform active:scale-90" title="Zoom Out (TradingView)">➖</button>
-                        <div class="h-3 w-px bg-slate-200 dark:bg-slate-800"></div>
-                        <button class="pane-reset-btn flex items-center gap-1 px-2 py-0.5 rounded-full hover:bg-sky-50 dark:hover:bg-sky-950 text-[10px] font-bold text-sky-600 dark:text-sky-400 transition-transform active:scale-95" title="Reset View (TradingView)">⏭️ Reset</button>
+                    <!-- TradingView Floating Navigation Toolbar (Visible strictly on hover, positioned above timeScale) -->
+                    <div class="pane-floating-nav absolute bottom-8 left-1/2 -translate-x-1/2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto flex items-center gap-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 py-1 rounded-full border border-slate-200/90 dark:border-slate-800/90 shadow-2xl select-none">
+                        <button class="pane-zoom-in-btn flex items-center justify-center w-6 h-6 rounded-full hover:bg-sky-50 dark:hover:bg-slate-800 text-[11px] text-slate-700 dark:text-slate-200 transition-transform active:scale-90 cursor-pointer" title="Zoom In (TradingView)">➕</button>
+                        <button class="pane-zoom-out-btn flex items-center justify-center w-6 h-6 rounded-full hover:bg-sky-50 dark:hover:bg-slate-800 text-[11px] text-slate-700 dark:text-slate-200 transition-transform active:scale-90 cursor-pointer" title="Zoom Out (TradingView)">➖</button>
+                        <div class="h-3.5 w-px bg-slate-200 dark:bg-slate-700"></div>
+                        <button class="pane-reset-btn flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-500/10 hover:bg-sky-500/20 text-[11px] font-bold text-sky-600 dark:text-sky-400 border border-sky-400/20 transition-transform active:scale-95 cursor-pointer" title="Reset View (TradingView)">⏭️ Reset</button>
                     </div>
 
-                    <!-- Go To Date — bottom-left, TradingView-style -->
-                    <div class="pane-goto-wrap absolute bottom-2.5 left-2.5 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto select-none">
-                        <button class="pane-goto-btn flex items-center gap-1 px-2 py-1 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 shadow-xl text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 hover:border-sky-400 transition-colors" title="Go To Date">
+                    <!-- Go To Date — bottom-left, positioned above timeScale -->
+                    <div class="pane-goto-wrap absolute bottom-8 left-3 z-30 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto select-none">
+                        <button class="pane-goto-btn flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 shadow-xl text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 hover:border-sky-400 transition-colors cursor-pointer" title="Go To Date">
                             📅 Go To
                         </button>
                         <div class="pane-goto-picker hidden absolute bottom-9 left-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-xl p-3 min-w-[200px]">
@@ -905,15 +905,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             }
 
-            // Floating center navigation bar hover visibility
+            // Floating center navigation bar hover visibility (smooth & pointer-events safe)
             const chartSection = document.getElementById("charts-grid-container")?.parentElement;
             const floatingNav = document.getElementById("chart-floating-nav");
             if (chartSection && floatingNav) {
                 chartSection.addEventListener("mouseenter", () => {
                     floatingNav.style.opacity = "1";
+                    floatingNav.style.pointerEvents = "auto";
                 });
                 chartSection.addEventListener("mouseleave", () => {
                     floatingNav.style.opacity = "0";
+                    floatingNav.style.pointerEvents = "none";
                 });
             }
 
