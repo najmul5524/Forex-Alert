@@ -552,6 +552,9 @@ document.addEventListener("DOMContentLoaded", () => {
                             <button class="toggle-alert-btn px-2 py-0.5 rounded text-[10px] font-bold ${a.is_active ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}" data-id="${a.id}">
                                 ${a.is_active ? "Active" : "Paused"}
                             </button>
+                            <button class="edit-alert-btn px-1.5 py-0.5 rounded text-[10px] bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 transition-colors" title="Edit Alert" data-id="${a.id}">
+                                ✏️
+                            </button>
                             <button class="test-alert-btn px-1.5 py-0.5 rounded text-[10px] bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700" title="Test Fire Alert" data-id="${a.id}">
                                 ⚡
                             </button>
@@ -574,6 +577,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     const id = btn.dataset.id;
                     await fetch(`/api/alerts/${id}/toggle`, { method: "POST" });
                     await this.loadAlerts();
+                });
+            });
+
+            container.querySelectorAll(".edit-alert-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const id = parseInt(btn.dataset.id);
+                    const alertObj = this.alerts.find(a => a.id === id);
+                    if (alertObj) {
+                        this.openEditAlertModal(alertObj);
+                    }
                 });
             });
 
@@ -1065,8 +1078,36 @@ document.addEventListener("DOMContentLoaded", () => {
             const modal = document.getElementById("alert-modal");
             
             const openAlertFn = () => {
-                document.getElementById("modal-symbol").value = this.symbol;
-                document.getElementById("modal-timeframe").value = this.timeframe;
+                if (!modal) return;
+
+                // Reset editing state
+                const editIdIn = document.getElementById("modal-editing-alert-id");
+                if (editIdIn) editIdIn.value = "";
+                const titleEl = document.getElementById("alert-modal-title");
+                if (titleEl) titleEl.innerText = "Create New Market Alert";
+                const btnTextEl = document.getElementById("save-alert-btn-text");
+                if (btnTextEl) btnTextEl.innerText = "Save Alert";
+
+                // Populate symbols dropdown dynamically from loaded symbols
+                const modalSym = document.getElementById("modal-symbol");
+                if (modalSym && this.symbols && this.symbols.length > 0) {
+                    modalSym.innerHTML = this.symbols.map(s => `
+                        <option value="${s.symbol}">${s.symbol} (${s.name || s.symbol})</option>
+                    `).join("");
+                }
+                if (modalSym) modalSym.value = this.symbol;
+                
+                const tfSelect = document.getElementById("modal-timeframe");
+                if (tfSelect) tfSelect.value = this.timeframe;
+
+                const activeChk = document.getElementById("modal-is-active");
+                if (activeChk) activeChk.checked = true;
+
+                // Re-render parameters so default target price matches current symbol's price
+                if (this.renderParams) {
+                    this.renderParams();
+                }
+
                 modal.classList.remove("hidden");
             };
 
@@ -1150,14 +1191,104 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         },
 
+        openEditAlertModal(alertObj) {
+            const modal = document.getElementById("alert-modal");
+            if (!modal) return;
+
+            // Populate symbols dropdown
+            const modalSym = document.getElementById("modal-symbol");
+            if (modalSym && this.symbols && this.symbols.length > 0) {
+                modalSym.innerHTML = this.symbols.map(s => `
+                    <option value="${s.symbol}">${s.symbol} (${s.name || s.symbol})</option>
+                `).join("");
+            }
+
+            const editIdIn = document.getElementById("modal-editing-alert-id");
+            if (editIdIn) editIdIn.value = alertObj.id;
+            const titleEl = document.getElementById("alert-modal-title");
+            if (titleEl) titleEl.innerText = `Edit Alert #${alertObj.id} (${alertObj.symbol})`;
+            const btnTextEl = document.getElementById("save-alert-btn-text");
+            if (btnTextEl) btnTextEl.innerText = "Save Changes";
+
+            if (modalSym) modalSym.value = alertObj.symbol;
+            const tfSelect = document.getElementById("modal-timeframe");
+            if (tfSelect) tfSelect.value = alertObj.timeframe;
+            const condSelect = document.getElementById("modal-condition-type");
+            if (condSelect) condSelect.value = alertObj.condition_type;
+            
+            // Trigger param fields render
+            if (this.renderParams) {
+                this.renderParams();
+            }
+
+            // Fill param values
+            if (alertObj.params) {
+                if (alertObj.params.target_price !== undefined) {
+                    const pIn = document.getElementById("modal-target-price");
+                    if (pIn) pIn.value = alertObj.params.target_price;
+                }
+                if (alertObj.params.direction) {
+                    const dIn = document.getElementById("modal-ind-dir");
+                    if (dIn) dIn.value = alertObj.params.direction;
+                }
+                if (alertObj.params.threshold !== undefined) {
+                    const tIn = document.getElementById("modal-rsi-threshold");
+                    if (tIn) tIn.value = alertObj.params.threshold;
+                }
+                if (alertObj.params.lower_bound !== undefined) {
+                    const lIn = document.getElementById("modal-channel-lower");
+                    if (lIn) lIn.value = alertObj.params.lower_bound;
+                }
+                if (alertObj.params.upper_bound !== undefined) {
+                    const uIn = document.getElementById("modal-channel-upper");
+                    if (uIn) uIn.value = alertObj.params.upper_bound;
+                }
+                if (alertObj.params.indicator?.period) {
+                    const perIn = document.getElementById("modal-ind-period");
+                    if (perIn) perIn.value = alertObj.params.indicator.period;
+                }
+            }
+
+            const freqSelect = document.getElementById("modal-frequency");
+            if (freqSelect) freqSelect.value = alertObj.trigger_frequency || "only_once";
+            const soundSelect = document.getElementById("modal-sound");
+            if (soundSelect) soundSelect.value = alertObj.sound || "chime";
+            const msgIn = document.getElementById("modal-message");
+            if (msgIn) msgIn.value = alertObj.message || "";
+            
+            const pushChk = document.getElementById("modal-channel-push");
+            if (pushChk) pushChk.checked = alertObj.channels?.includes("push") || false;
+
+            const emailChk = document.getElementById("modal-channel-email");
+            const emailRow = document.getElementById("modal-email-row");
+            const emailIn = document.getElementById("modal-target-email");
+            if (emailChk) {
+                const hasEmail = alertObj.channels?.includes("email") || false;
+                emailChk.checked = hasEmail;
+                if (hasEmail && emailRow) {
+                    emailRow.classList.remove("hidden");
+                    if (emailIn) emailIn.value = alertObj.target_email || "";
+                } else if (emailRow) {
+                    emailRow.classList.add("hidden");
+                }
+            }
+
+            const activeChk = document.getElementById("modal-is-active");
+            if (activeChk) activeChk.checked = alertObj.is_active;
+
+            modal.classList.remove("hidden");
+        },
+
         setupConditionFormWatcher() {
             const condSelect = document.getElementById("modal-condition-type");
             const container = document.getElementById("dynamic-params-container");
+            const modalSym = document.getElementById("modal-symbol");
             if (!condSelect || !container) return;
 
             const renderParams = () => {
                 const val = condSelect.value;
-                const sObj = this.symbols.find(s => s.symbol === this.symbol);
+                const symVal = modalSym ? modalSym.value : this.symbol;
+                const sObj = this.symbols.find(s => s.symbol === symVal) || this.symbols.find(s => s.symbol === this.symbol);
                 const defaultP = sObj ? sObj.current_price.toFixed(sObj.decimals) : "1.08500";
 
                 if (["price_cross_up", "price_cross_down", "price_greater", "price_less"].includes(val)) {
@@ -1248,11 +1379,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             };
 
+            this.renderParams = renderParams;
             condSelect.addEventListener("change", renderParams);
+            if (modalSym) {
+                modalSym.addEventListener("change", renderParams);
+            }
             renderParams();
         },
 
         async handleCreateAlertSubmit() {
+            const editingId = document.getElementById("modal-editing-alert-id") ? document.getElementById("modal-editing-alert-id").value : "";
+            const isEditing = Boolean(editingId);
+
             const symbol = document.getElementById("modal-symbol").value;
             const timeframe = document.getElementById("modal-timeframe").value;
             const condType = document.getElementById("modal-condition-type").value;
@@ -1260,6 +1398,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const sound = document.getElementById("modal-sound") ? document.getElementById("modal-sound").value : "chime";
             const customMessage = document.getElementById("modal-message").value.trim();
             const targetEmail = document.getElementById("modal-target-email") ? document.getElementById("modal-target-email").value.trim() : null;
+            const isActive = document.getElementById("modal-is-active") ? document.getElementById("modal-is-active").checked : true;
 
             const channels = ["in_app"];
             if (document.getElementById("modal-channel-push").checked) channels.push("push");
@@ -1297,26 +1436,31 @@ document.addEventListener("DOMContentLoaded", () => {
                 sound: sound,
                 target_email: targetEmail || null,
                 message: customMessage || null,
-                is_active: true
+                is_active: isActive
             };
 
             try {
-                const resp = await fetch("/api/alerts", {
-                    method: "POST",
+                const url = isEditing ? `/api/alerts/${editingId}` : "/api/alerts";
+                const method = isEditing ? "PUT" : "POST";
+
+                const resp = await fetch(url, {
+                    method: method,
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(alertPayload)
                 });
 
                 if (resp.ok) {
                     document.getElementById("alert-modal").classList.add("hidden");
-                    showToastNotification("Alert Created", `Alert for ${symbol} activated.`, "success");
+                    const toastTitle = isEditing ? "Alert Updated" : (isActive ? "Alert Saved & Activated" : "Alert Saved (Inactive)");
+                    const toastMsg = isEditing ? `Alert #${editingId} (${symbol}) updated successfully.` : `Alert for ${symbol} saved.`;
+                    showToastNotification(toastTitle, toastMsg, "success");
                     await this.loadAlerts();
                 } else {
                     const err = await resp.json();
-                    alert("Error creating alert: " + (err.detail || "Check input parameters"));
+                    alert("Error saving alert: " + (err.detail || "Check input parameters"));
                 }
             } catch (e) {
-                console.error("Alert creation failed:", e);
+                console.error("Alert saving failed:", e);
             }
         }
     };
